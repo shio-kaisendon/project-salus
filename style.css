@@ -1,0 +1,207 @@
+:root{
+    --bg:#FAF8F5;
+    --card:rgba(255,255,255,.72);
+    --text:#3A312B;
+    --sub:#7C7269;
+
+    --accent:#B88A5A;
+    --gold:#C9A96A;
+
+    --radius:28px;
+
+    --shadow:
+        0 12px 32px rgba(0,0,0,.08);
+
+    --max-width:720px;
+}
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+body{
+
+    background:var(--bg);
+
+    color:var(--text);
+
+    font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    "SF Pro Display",
+    sans-serif;
+
+    min-height:100vh;
+
+    padding:32px;
+
+}
+
+.hero{
+
+    text-align:center;
+
+    margin-bottom:36px;
+
+}
+
+.mission-patch{
+
+    width:110px;
+    height:110px;
+
+    margin:auto;
+
+    border-radius:50%;
+
+    background:white;
+
+    display:flex;
+
+    justify-content:center;
+    align-items:center;
+
+    font-size:52px;
+
+    box-shadow:var(--shadow);
+
+    margin-bottom:24px;
+
+}
+
+h1{
+
+    font-size:36px;
+
+    font-weight:700;
+
+    letter-spacing:-1px;
+
+}
+
+h2{
+
+    color:var(--accent);
+
+    margin-top:8px;
+
+    font-weight:500;
+
+}
+
+.hero p{
+
+    margin-top:14px;
+
+    color:var(--sub);
+
+}
+
+main{
+
+    max-width:var(--max-width);
+
+    margin:auto;
+
+    display:grid;
+
+    gap:18px;
+
+}
+
+.card{
+
+    background:var(--card);
+
+    backdrop-filter:blur(24px);
+
+    border-radius:var(--radius);
+
+    padding:28px;
+
+    box-shadow:var(--shadow);
+
+}
+
+.card h3{
+
+    font-size:24px;
+
+}
+
+.card p{
+
+    margin-top:10px;
+
+    color:var(--sub);
+
+}
+
+button{
+
+    margin-top:22px;
+
+    width:100%;
+
+    height:54px;
+
+    border:none;
+
+    border-radius:18px;
+
+    background:var(--accent);
+
+    color:white;
+
+    font-size:17px;
+
+    cursor:pointer;
+
+    transition:.2s;
+
+}
+
+button:active{
+
+    transform:scale(.98);
+
+}
+
+@media (min-width:900px){
+
+    body{
+
+        padding:60px;
+
+    }
+
+}
+.form-group {
+    margin-top: 18px;
+}
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+.form-group input[type="date"] {
+    width: 100%;
+    height: 48px;
+    border: none;
+    border-radius: 14px;
+    padding: 0 14px;
+    background:#ffffff;
+    font-size: 16px;
+    box-shadow: 0 4px 12px rgba(0,0,0,.05);
+}
+#result {
+    margin-top: 24px;
+    padding: 16px;
+    background:#ffffff;
+    border-radius: 14px;
+    font-family: monospace;
+    line-height: 1.7;
+    white-space: pre-wrap;
+}
