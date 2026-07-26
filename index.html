@@ -1,86 +1,106 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PROJECT SALUS Mission Control</title>
-
-    <meta name="theme-color" content="#FAF8F5">
-
+    <meta name="description" content="PROJECT SALUS mission control dashboard for wellness planning and calendar generation.">
+    <meta name="theme-color" content="#F7EFE7">
     <link rel="manifest" href="manifest.json">
     <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
+    <div class="app-shell">
+        <header class="hero panel">
+            <div class="hero-top">
+                <div class="mission-patch" aria-label="PROJECT SALUS mission patch">
+                    <img src="assets/images/PROJECT_SALUS_MissionPatch_v1.jpeg" alt="PROJECT SALUS mission patch" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <div class="patch-fallback" aria-hidden="true">🛰</div>
+                </div>
+                <div class="hero-status">
+                    <span class="status-pill">
+                        <span class="status-dot"></span>
+                        Mission Status: Live
+                    </span>
+                    <p class="hero-kicker">Personal health mission control</p>
+                </div>
+            </div>
 
-<header class="hero">
+            <div class="hero-main">
+                <div class="title-block">
+                    <p class="eyebrow">NASA-inspired operations</p>
+                    <h1>PROJECT SALUS</h1>
+                    <h2>MISSION CONTROL</h2>
+                </div>
+                <div class="clock-card" aria-live="polite">
+                    <span class="clock-label">Current Time</span>
+                    <div id="liveClock" class="clock-time">--:--</div>
+                </div>
+            </div>
 
-    <div class="mission-patch">
-        🚀
+            <p class="hero-copy">A calm, mission-ready workspace for tracking wellness routines, scheduling rituals, and staying aligned with your personal mission.</p>
+        </header>
+
+        <main class="dashboard-grid">
+            <section class="card primary-card panel" aria-labelledby="calendar-title">
+                <div class="card-heading">
+                    <div>
+                        <p class="card-label">Operations</p>
+                        <h3 id="calendar-title">Calendar Generator</h3>
+                    </div>
+                    <span class="card-badge">Live</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="startDate">Start date</label>
+                    <input type="date" id="startDate">
+                </div>
+                <div class="form-group">
+                    <label for="endDate">End date</label>
+                    <input type="date" id="endDate">
+                </div>
+                <div class="form-group checkbox">
+                    <input type="checkbox" id="specialWeek">
+                    <label for="specialWeek">Special week</label>
+                </div>
+
+                <p class="card-copy">Generate a calendar file for your mission timeline.</p>
+                <button id="calendarButton" class="primary-button">Generate Calendar</button>
+                <div id="result" class="result-card" role="status" aria-live="polite"></div>
+            </section>
+
+            <section class="card panel" aria-labelledby="mission-log-title">
+                <div class="card-heading">
+                    <div>
+                        <p class="card-label">Command Log</p>
+                        <h3 id="mission-log-title">Mission Log</h3>
+                    </div>
+                </div>
+                <p class="card-copy">Daily check-ins, wellness milestones, and recovery notes will appear here as your mission evolves.</p>
+            </section>
+
+            <section class="card panel" aria-labelledby="dashboard-title">
+                <div class="card-heading">
+                    <div>
+                        <p class="card-label">Command Center</p>
+                        <h3 id="dashboard-title">Dashboard</h3>
+                    </div>
+                </div>
+                <p class="card-copy">A concise overview of your current objectives, readiness, and mission focus.</p>
+            </section>
+
+            <section class="card panel" aria-labelledby="settings-title">
+                <div class="card-heading">
+                    <div>
+                        <p class="card-label">System</p>
+                        <h3 id="settings-title">Settings</h3>
+                    </div>
+                </div>
+                <p class="card-copy">Adjust the command environment and manage your mission preferences over time.</p>
+            </section>
+        </main>
     </div>
 
-    <h1>PROJECT SALUS</h1>
-
-    <h2>MISSION CONTROL</h2>
-
-    <p>Your Personal Health Mission</p>
-
-</header>
-
-<main>
-
-<section class="card primary">
-
-<h3>Calendar Generator</h3>
-<div class="form-group">
-    <label for="startDate">開始日</label>
-    <input type="date" id="startDate">
-</div>
-<div class="form-group">
-    <label for="endDate">終了日</label>
-    <input type="date" id="endDate">
-</div>
-<div class="form-group checkbox">
-    <input type="checkbox" id="specialWeek">
-    <label for="specialWeek">🏮 SPECIAL WEEK</label>
-</div>
-<p>Generate Google Calendar</p>
-
-<button id="calendarButton">
-Generate Calendar
-</button>
-
-<div id="result"></div>
-</section>
-
-<section class="card">
-
-<h3>Mission Log</h3>
-
-<p>Coming Soon</p>
-
-</section>
-
-<section class="card">
-
-<h3>Dashboard</h3>
-
-<p>Coming Soon</p>
-
-</section>
-
-<section class="card">
-
-<h3>Settings</h3>
-
-<p>Coming Soon</p>
-
-</section>
-
-</main>
-
-<script src="script.js"></script>
-
+    <script src="script.js"></script>
 </body>
-
 </html>

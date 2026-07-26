@@ -1,7 +1,7 @@
 function createICS(events) {
     let ics = `BEGIN:VCALENDAR
 VERSION:2.0
-PRODID:-//PROJECT SALUS//Mission Control//JP
+PRODID:-//PROJECT SALUS//Mission Control//EN
 `;
 
     events.forEach(event => {
@@ -20,55 +20,82 @@ END:VEVENT
     return ics;
 }
 
-const button = document.getElementById("calendarButton");
+function updateClock() {
+    const clockElement = document.getElementById("liveClock");
 
-button.addEventListener("click", () => {
-
-    const startDate = document.getElementById("startDate").value;
-    const endDate = document.getElementById("endDate").value;
-    const result = document.getElementById("result");
-
-    result.innerHTML = "";
-
-    // 入力チェック
-    if (!startDate) {
-        result.innerText = "⚠️ 開始日を入力してください";
+    if (!clockElement) {
         return;
     }
 
-    if (!endDate) {
-        result.innerText = "⚠️ 終了日を入力してください";
-        return;
-    }
-
-    if (new Date(startDate) > new Date(endDate)) {
-        result.innerText = "⚠️ 終了日は開始日以降にしてください";
-        return;
-    }
-
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-
-    const current = new Date(start);
-    const dates = [];
-
-    while (current <= end) {
-        dates.push(current.toISOString().split("T")[0]);
-        current.setDate(current.getDate() + 1);
-    }
-
-    const ics = createICS(dates);
-
-    const blob = new Blob([ics], {
-        type: "text/calendar"
+    const now = new Date();
+    const timeString = now.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit"
+    });
+    const dateString = now.toLocaleDateString([], {
+        weekday: "short",
+        month: "short",
+        day: "numeric"
     });
 
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = "PROJECT_SALUS.ics";
-    link.click();
+    clockElement.innerText = `${dateString} • ${timeString}`;
+}
 
-    URL.revokeObjectURL(link.href);
+const button = document.getElementById("calendarButton");
 
-    result.innerText = "✅ PROJECT_SALUS.ics を作成しました";
-});
+updateClock();
+setInterval(updateClock, 1000);
+
+if (button) {
+    button.addEventListener("click", () => {
+        const startDate = document.getElementById("startDate").value;
+        const endDate = document.getElementById("endDate").value;
+        const specialWeek = document.getElementById("specialWeek").checked;
+        const result = document.getElementById("result");
+
+        result.innerHTML = "";
+
+        if (!startDate) {
+            result.innerText = "⚠️ Please enter a start date.";
+            return;
+        }
+
+        if (!endDate) {
+            result.innerText = "⚠️ Please enter an end date.";
+            return;
+        }
+
+        if (new Date(startDate) > new Date(endDate)) {
+            result.innerText = "⚠️ End date must be on or after the start date.";
+            return;
+        }
+
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+
+        const current = new Date(start);
+        const dates = [];
+
+        while (current <= end) {
+            dates.push(current.toISOString().split("T")[0]);
+            current.setDate(current.getDate() + 1);
+        }
+
+        const ics = createICS(dates);
+        const fileName = specialWeek ? "PROJECT_SALUS_SPECIAL_WEEK.ics" : "PROJECT_SALUS.ics";
+
+        const blob = new Blob([ics], {
+            type: "text/calendar"
+        });
+
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = fileName;
+        link.click();
+
+        URL.revokeObjectURL(link.href);
+
+        result.innerText = `✅ ${fileName} was created.`;
+    });
+}
