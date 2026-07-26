@@ -47,18 +47,15 @@ current.setDate(current.getDate() + 1);
 }
 const ics = createICS(dates);
 
-const blob = new Blob([ics], {
-    type: "text/calendar"
-});
+const firstDate = dates[0];
 
-const link = document.createElement("a");
+const url =
+`https://calendar.google.com/calendar/render?action=TEMPLATE
+&text=PROJECT+SALUS
+&dates=${firstDate.replaceAll("-", "")}/${firstDate.replaceAll("-", "")}
+`;
 
-link.href = URL.createObjectURL(blob);
-link.download = "PROJECT_SALUS.ics";
+window.open(url, "_blank");
 
-link.click();
-
-URL.revokeObjectURL(link.href);
-
-result.innerText = "✅ PROJECT_SALUS.ics を作成しました";
+result.innerText = "✅ Googleカレンダーを開きました";
 });
