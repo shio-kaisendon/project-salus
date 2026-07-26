@@ -42,10 +42,22 @@ function updateClock() {
     clockElement.innerText = `${dateString} • ${timeString}`;
 }
 
+function attachQuickActionFeedback() {
+    const quickActions = document.querySelectorAll(".quick-action");
+
+    quickActions.forEach(button => {
+        button.addEventListener("click", () => {
+            quickActions.forEach(item => item.classList.remove("is-active"));
+            button.classList.add("is-active");
+        });
+    });
+}
+
 const button = document.getElementById("calendarButton");
 
 updateClock();
 setInterval(updateClock, 1000);
+attachQuickActionFeedback();
 
 if (button) {
     button.addEventListener("click", () => {
@@ -57,17 +69,17 @@ if (button) {
         result.innerHTML = "";
 
         if (!startDate) {
-            result.innerText = "⚠️ Please enter a start date.";
+            result.innerText = "⚠️ 開始日を入力してください。";
             return;
         }
 
         if (!endDate) {
-            result.innerText = "⚠️ Please enter an end date.";
+            result.innerText = "⚠️ 終了日を入力してください。";
             return;
         }
 
         if (new Date(startDate) > new Date(endDate)) {
-            result.innerText = "⚠️ End date must be on or after the start date.";
+            result.innerText = "⚠️ 終了日は開始日以降にしてください。";
             return;
         }
 
@@ -96,6 +108,6 @@ if (button) {
 
         URL.revokeObjectURL(link.href);
 
-        result.innerText = `✅ ${fileName} was created.`;
+        result.innerText = `✅ ${fileName} を作成しました。`;
     });
 }

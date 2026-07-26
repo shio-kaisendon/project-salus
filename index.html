@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ja">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -22,7 +22,7 @@
                         <span class="status-dot"></span>
                         Mission Status: Live
                     </span>
-                    <p class="hero-kicker">Personal health mission control</p>
+                    <p class="hero-kicker">個人の健康ミッションを支える司令室</p>
                 </div>
             </div>
 
@@ -33,70 +33,107 @@
                     <h2>MISSION CONTROL</h2>
                 </div>
                 <div class="clock-card" aria-live="polite">
-                    <span class="clock-label">Current Time</span>
+                    <span class="clock-label">現在時刻</span>
                     <div id="liveClock" class="clock-time">--:--</div>
                 </div>
             </div>
 
-            <p class="hero-copy">A calm, mission-ready workspace for tracking wellness routines, scheduling rituals, and staying aligned with your personal mission.</p>
+            <p class="hero-copy">今日の健康ミッションを、静かに・正確に・着実に進めるためのミッションコントロールです。</p>
         </header>
 
         <main class="dashboard-grid">
+            <section class="card panel mission-dashboard" aria-labelledby="mission-dashboard-title">
+                <div class="card-heading">
+                    <div>
+                        <p class="card-label">MISSION DASHBOARD</p>
+                        <h3 id="mission-dashboard-title">ミッション ダッシュボード</h3>
+                    </div>
+                    <span class="card-badge">TODAY</span>
+                </div>
+
+                <div class="dashboard-stack">
+                    <article class="glass-card mission-list-card">
+                        <div class="glass-card__header">
+                            <p class="glass-card__eyebrow">今日のミッション</p>
+                            <h4>今日の予定</h4>
+                        </div>
+                        <ul class="mission-list">
+                            <li><span class="mission-item-marker"></span>ジムへ出発</li>
+                            <li><span class="mission-item-marker"></span>メガダンス</li>
+                            <li><span class="mission-item-marker"></span>ダークボックス</li>
+                        </ul>
+                    </article>
+
+                    <article class="glass-card progress-card">
+                        <div class="glass-card__header">
+                            <p class="glass-card__eyebrow">進捗</p>
+                            <h4>ミッション進捗</h4>
+                        </div>
+                        <div class="progress-block">
+                            <div class="progress-meta">
+                                <span class="progress-value">60%</span>
+                                <span class="progress-label">進行中</span>
+                            </div>
+                            <div class="progress-bar" role="progressbar" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100">
+                                <span class="progress-bar__fill"></span>
+                            </div>
+                        </div>
+                    </article>
+
+                    <article class="glass-card next-mission-card">
+                        <div class="glass-card__header">
+                            <p class="glass-card__eyebrow">次のミッション</p>
+                            <h4>出発</h4>
+                        </div>
+                        <p class="next-mission-time">11:15</p>
+                    </article>
+
+                    <article class="glass-card status-card">
+                        <div class="glass-card__header">
+                            <p class="glass-card__eyebrow">ステータス</p>
+                            <h4>通信状態</h4>
+                        </div>
+                        <div class="status-list" aria-label="Mission status">
+                            <span class="status-chip online">ONLINE</span>
+                            <span class="status-chip synced">SYNCED</span>
+                            <span class="status-chip ready">READY</span>
+                        </div>
+                    </article>
+                </div>
+
+                <div class="quick-actions" role="group" aria-label="クイックアクション">
+                    <button type="button" class="quick-action">ダッシュボード</button>
+                    <button type="button" class="quick-action">カレンダー</button>
+                    <button type="button" class="quick-action">ミッションログ</button>
+                    <button type="button" class="quick-action">設定</button>
+                </div>
+            </section>
+
             <section class="card primary-card panel" aria-labelledby="calendar-title">
                 <div class="card-heading">
                     <div>
-                        <p class="card-label">Operations</p>
-                        <h3 id="calendar-title">Calendar Generator</h3>
+                        <p class="card-label">OPERATIONS</p>
+                        <h3 id="calendar-title">カレンダー生成</h3>
                     </div>
-                    <span class="card-badge">Live</span>
+                    <span class="card-badge">LIVE</span>
                 </div>
 
                 <div class="form-group">
-                    <label for="startDate">Start date</label>
+                    <label for="startDate">開始日</label>
                     <input type="date" id="startDate">
                 </div>
                 <div class="form-group">
-                    <label for="endDate">End date</label>
+                    <label for="endDate">終了日</label>
                     <input type="date" id="endDate">
                 </div>
                 <div class="form-group checkbox">
                     <input type="checkbox" id="specialWeek">
-                    <label for="specialWeek">Special week</label>
+                    <label for="specialWeek">スペシャルウィーク</label>
                 </div>
 
-                <p class="card-copy">Generate a calendar file for your mission timeline.</p>
-                <button id="calendarButton" class="primary-button">Generate Calendar</button>
+                <p class="card-copy">ミッションのタイムライン用にカレンダーを生成します。</p>
+                <button id="calendarButton" class="primary-button">カレンダーを生成</button>
                 <div id="result" class="result-card" role="status" aria-live="polite"></div>
-            </section>
-
-            <section class="card panel" aria-labelledby="mission-log-title">
-                <div class="card-heading">
-                    <div>
-                        <p class="card-label">Command Log</p>
-                        <h3 id="mission-log-title">Mission Log</h3>
-                    </div>
-                </div>
-                <p class="card-copy">Daily check-ins, wellness milestones, and recovery notes will appear here as your mission evolves.</p>
-            </section>
-
-            <section class="card panel" aria-labelledby="dashboard-title">
-                <div class="card-heading">
-                    <div>
-                        <p class="card-label">Command Center</p>
-                        <h3 id="dashboard-title">Dashboard</h3>
-                    </div>
-                </div>
-                <p class="card-copy">A concise overview of your current objectives, readiness, and mission focus.</p>
-            </section>
-
-            <section class="card panel" aria-labelledby="settings-title">
-                <div class="card-heading">
-                    <div>
-                        <p class="card-label">System</p>
-                        <h3 id="settings-title">Settings</h3>
-                    </div>
-                </div>
-                <p class="card-copy">Adjust the command environment and manage your mission preferences over time.</p>
             </section>
         </main>
     </div>
