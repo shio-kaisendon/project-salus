@@ -15,13 +15,17 @@
             <div class="hero-top">
                 <div class="mission-patch" aria-label="PROJECT SALUS mission patch">
                     <img src="assets/images/PROJECT_SALUS_MissionPatch_v1.jpeg" alt="PROJECT SALUS mission patch" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                    <div class="patch-fallback" aria-hidden="true">🛰</div>
+                    <div class="patch-fallback" aria-hidden="true">✦</div>
                 </div>
                 <div class="hero-status">
                     <span class="status-pill">
                         <span class="status-dot"></span>
                         Mission Status: Live
                     </span>
+                    <div class="mission-meta" aria-label="Mission metadata">
+                        <span class="meta-item"><strong>Mission ID</strong> SALUS-01</span>
+                        <span class="meta-item"><strong>Mission Phase</strong> OPERATIONAL</span>
+                    </div>
                     <p class="hero-kicker">個人の健康ミッションを支える司令室</p>
                 </div>
             </div>
@@ -36,6 +40,14 @@
                     <span class="clock-label">現在時刻</span>
                     <div id="liveClock" class="clock-time">--:--</div>
                 </div>
+            </div>
+
+            <div class="hud-row" aria-label="Mission control HUD">
+                <span class="hud-item">HEALTH</span>
+                <span class="hud-item">CALENDAR</span>
+                <span class="hud-item">WATCH</span>
+                <span class="hud-item">MISSION LOG</span>
+                <span class="hud-item">SYSTEM</span>
             </div>
 
             <p class="hero-copy">今日の健康ミッションを、静かに・正確に・着実に進めるためのミッションコントロールです。</p>

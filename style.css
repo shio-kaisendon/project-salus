@@ -12,6 +12,7 @@
     --radius: 30px;
     --shadow: 0 24px 50px rgba(73, 44, 24, 0.14);
     --max-width: 1100px;
+    --transition: 220ms ease;
 }
 
 * {
@@ -30,6 +31,8 @@ body {
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif;
     line-height: 1.5;
 }
+
+/* Mission control shell and reusable panel styling */
 
 .app-shell {
     max-width: var(--max-width);
@@ -50,7 +53,8 @@ body {
     position: relative;
     overflow: hidden;
     padding: 28px;
-    margin-bottom: 20px;
+    margin-bottom: 24px;
+    animation: float-in 600ms ease both;
 }
 
 .hero::before {
@@ -78,8 +82,8 @@ body {
 }
 
 .mission-patch {
-    width: 110px;
-    height: 110px;
+    width: 112px;
+    height: 112px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -88,6 +92,7 @@ body {
     border: 1px solid rgba(255, 255, 255, 0.9);
     box-shadow: 0 14px 30px rgba(81, 46, 18, 0.12);
     overflow: hidden;
+    animation: patch-float 4s ease-in-out infinite;
 }
 
 .mission-patch img {
@@ -105,7 +110,7 @@ body {
 .hero-status {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 10px;
     align-items: flex-start;
 }
 
@@ -118,6 +123,28 @@ body {
     background: rgba(255, 255, 255, 0.7);
     color: var(--accent-strong);
     font-size: 0.95rem;
+    font-weight: 700;
+}
+
+.mission-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.meta-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 10px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.58);
+    color: var(--sub);
+    font-size: 0.85rem;
+}
+
+.meta-item strong {
+    color: var(--accent-strong);
     font-weight: 700;
 }
 
@@ -159,10 +186,29 @@ h2 {
     letter-spacing: 0.2em;
 }
 
+.hud-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 18px;
+}
+
+.hud-item {
+    padding: 8px 12px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.62);
+    border: 1px solid rgba(255, 255, 255, 0.75);
+    color: var(--sub);
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
 .hero-copy {
     max-width: 680px;
     color: var(--sub);
-    margin-top: 12px;
+    margin-top: 16px;
     font-size: 1rem;
 }
 
@@ -173,6 +219,12 @@ h2 {
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.74), rgba(246, 228, 208, 0.9));
     border: 1px solid rgba(255, 255, 255, 0.75);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
+    transition: transform var(--transition), box-shadow var(--transition);
+}
+
+.clock-card:hover {
+    transform: translateY(-2px);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65), 0 12px 24px rgba(73, 44, 24, 0.12);
 }
 
 .clock-label {
@@ -199,7 +251,7 @@ h2 {
 
 .card {
     padding: 24px;
-    transition: transform 180ms ease, box-shadow 180ms ease;
+    transition: transform var(--transition), box-shadow var(--transition);
 }
 
 .card:hover {
@@ -255,7 +307,13 @@ h2 {
     border-radius: 24px;
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.76), rgba(246, 228, 208, 0.82));
     border: 1px solid rgba(255, 255, 255, 0.8);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72), 0 12px 24px rgba(73, 44, 24, 0.08);
+    transition: transform var(--transition), box-shadow var(--transition);
+}
+
+.glass-card:hover {
+    transform: translateY(-2px);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72), 0 16px 30px rgba(73, 44, 24, 0.12);
 }
 
 .glass-card__header {
@@ -397,7 +455,7 @@ h2 {
     font-size: 0.95rem;
     font-weight: 700;
     cursor: pointer;
-    transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease;
+    transition: transform var(--transition), box-shadow var(--transition), background var(--transition);
 }
 
 .quick-action:hover,
@@ -501,6 +559,27 @@ h2 {
     line-height: 1.6;
     min-height: 56px;
     white-space: pre-wrap;
+}
+
+@keyframes patch-float {
+    0%,
+    100% {
+        transform: translateY(0px);
+    }
+    50% {
+        transform: translateY(-6px);
+    }
+}
+
+@keyframes float-in {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 @media (min-width: 700px) {
