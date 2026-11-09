@@ -611,7 +611,7 @@ function renderSpecialScheduleList() {
             renderSpecialScheduleList();
             updateMissionDisplay();
             renderMissionHistoryDate();
-            renderMonthlyMissionReport();
+            renderMissionActivityMap();
             if (status) {
                 status.textContent = `Removed ${formatSpecialDate(date)}.`;
             }
@@ -751,7 +751,7 @@ function initializeSpecialScheduleManagement() {
         renderSpecialScheduleList();
         updateMissionDisplay();
         renderMissionHistoryDate();
-        renderMonthlyMissionReport();
+        renderMissionActivityMap();
         if (status) {
             status.textContent = "Special schedules saved.";
         }
@@ -779,7 +779,7 @@ function isValidMissionHistoryRecord(date, record) {
         record &&
         typeof record === "object" &&
         record.date === date &&
-        typeof record.gymVisited === "boolean" &&
+        (record.gymVisited === undefined || typeof record.gymVisited === "boolean") &&
         typeof record.plannedGym === "boolean" &&
         typeof record.updatedAt === "string" &&
         Number.isFinite(Date.parse(record.updatedAt)) &&
@@ -821,8 +821,8 @@ function loadMissionHistory() {
                 hasInvalidRecord = true;
             }
             records[date] = {
+                ...record,
                 date,
-                gymVisited: record.gymVisited,
                 plannedGym: record.plannedGym,
                 lessons,
                 updatedAt: record.updatedAt
@@ -838,6 +838,14 @@ function loadMissionHistory() {
 }
 
 let missionHistory = {};
+
+function getAttendedLessonCount(record) {
+    const attendedLessons = (record?.lessons || []).filter(lesson => lesson.attended);
+    const uniqueLessons = new Set(attendedLessons.map(lesson =>
+        lesson.id || lesson.name.trim().toLocaleLowerCase()
+    ));
+    return uniqueLessons.size;
+}
 
 function persistMissionHistory(records) {
     try {
@@ -869,7 +877,6 @@ function getHistoryElements() {
     return {
         dateInput: document.getElementById("historyDate"),
         scheduleSummary: document.getElementById("historyScheduleSummary"),
-        gymCheckbox: document.getElementById("gymVisitCheckbox"),
         lessonList: document.getElementById("historyLessonList"),
         saveButton: document.getElementById("saveHistoryButton"),
         deleteButton: document.getElementById("deleteHistoryButton"),
@@ -883,11 +890,10 @@ function renderMissionHistoryDate() {
     const {
         dateInput,
         scheduleSummary,
-        gymCheckbox,
         lessonList,
         deleteButton
     } = getHistoryElements();
-    if (!dateInput || !scheduleSummary || !gymCheckbox || !lessonList || !deleteButton) {
+    if (!dateInput || !scheduleSummary || !lessonList || !deleteButton) {
         return;
     }
 
@@ -896,7 +902,6 @@ function renderMissionHistoryDate() {
     lessonList.replaceChildren();
     if (!date) {
         scheduleSummary.textContent = "Select a valid date to record attendance.";
-        gymCheckbox.checked = false;
         deleteButton.hidden = true;
         return;
     }
@@ -916,9 +921,8 @@ function renderMissionHistoryDate() {
     scheduleSummary.textContent = record
         ? `${plannedGym ? "Scheduled gym day" : "No gym schedule"} · Saved record from ${new Date(record.updatedAt).toLocaleDateString("en-US")}`
         : plannedGym
-            ? "Scheduled gym day · Attendance is recorded separately from the plan."
-            : "No gym schedule for this date. You can still record a gym visit.";
-    gymCheckbox.checked = record?.gymVisited || false;
+            ? "Scheduled gym day · Select the lessons you attended."
+            : "No gym schedule for this date.";
     deleteButton.hidden = !record;
 
     if (lessons.length === 0) {
@@ -945,6 +949,155 @@ function renderMissionHistoryDate() {
     });
 }
 
+let activityMapMonth = null;
+let activityMapSelectedDate = "";
+
+function getActivityMapElements() {
+    return {
+        monthLabel: document.getElementById("activityMapMonth"),
+        monthlyClassesAttended: document.getElementById("activityMonthlyClassesAttended"),
+        grid: document.getElementById("activityCalendarGrid"),
+        selectedTitle: document.getElementById("activitySelectedDateTitle"),
+        selectedDetails: document.getElementById("activitySelectedDetails"),
+        editHistoryButton: document.getElementById("activityEditHistoryButton")
+    };
+}
+
+function getActivityDayState(dateKey, date) {
+    const record = missionHistory[dateKey];
+    const plannedGym = hasPlannedGymSchedule(getMissionHistoryScheduleForDate(date));
+    if (getAttendedLessonCount(record) > 0) {
+        return "completed";
+    }
+    if (plannedGym && dateKey < dateToKey(new Date())) {
+        return "missed";
+    }
+    return plannedGym ? "upcoming" : "none";
+}
+
+function renderActivitySelectedDate() {
+    const { selectedTitle, selectedDetails, editHistoryButton } = getActivityMapElements();
+    const date = parseLocalDate(activityMapSelectedDate);
+    if (!selectedTitle || !selectedDetails || !editHistoryButton) {
+        return;
+    }
+    if (!date) {
+        selectedTitle.textContent = "Select a date";
+        const prompt = document.createElement("p");
+        prompt.className = "activity-details-prompt";
+        prompt.textContent = "Choose a calendar date to review its schedule and attendance.";
+        selectedDetails.replaceChildren(prompt);
+        editHistoryButton.hidden = true;
+        return;
+    }
+
+    const record = missionHistory[activityMapSelectedDate];
+    const todayKey = dateToKey(new Date());
+    selectedTitle.textContent = date.toLocaleDateString("en-US", {
+        weekday: "long",
+        month: "long",
+        day: "numeric",
+        year: "numeric"
+    });
+    selectedDetails.replaceChildren();
+
+    const status = document.createElement("p");
+    if (record) {
+        status.textContent = "Attendance record saved.";
+        editHistoryButton.textContent = "View / Edit Record";
+    } else if (activityMapSelectedDate > todayKey) {
+        status.textContent = "Scheduled for this day.";
+        editHistoryButton.textContent = "Record Attendance";
+    } else if (activityMapSelectedDate === todayKey) {
+        status.textContent = "Today’s attendance has not been recorded yet.";
+        editHistoryButton.textContent = "Record Attendance";
+    } else {
+        status.textContent = "No attendance record for this day.";
+        editHistoryButton.textContent = "Record Attendance";
+    }
+    selectedDetails.append(status);
+    editHistoryButton.hidden = false;
+}
+
+function renderMissionActivityMap() {
+    const { monthLabel, monthlyClassesAttended, grid } = getActivityMapElements();
+    if (!monthLabel || !monthlyClassesAttended || !grid) {
+        return;
+    }
+
+    if (!activityMapMonth) {
+        const now = new Date();
+        activityMapMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    }
+    const year = activityMapMonth.getFullYear();
+    const month = activityMapMonth.getMonth();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const firstWeekdayOffset = (new Date(year, month, 1).getDay() + 6) % 7;
+    monthLabel.textContent = activityMapMonth.toLocaleDateString("en-US", {
+        month: "long",
+        year: "numeric"
+    });
+    const monthPrefix = `${year}-${String(month + 1).padStart(2, "0")}-`;
+    const classesAttended = Object.values(missionHistory)
+        .filter(record => record.date.startsWith(monthPrefix))
+        .reduce((total, record) => total + getAttendedLessonCount(record), 0);
+    monthlyClassesAttended.textContent = String(classesAttended);
+    grid.replaceChildren();
+
+    for (let index = 0; index < firstWeekdayOffset; index += 1) {
+        const emptyDay = document.createElement("span");
+        emptyDay.className = "activity-calendar-empty";
+        emptyDay.setAttribute("aria-hidden", "true");
+        grid.append(emptyDay);
+    }
+
+    for (let day = 1; day <= daysInMonth; day += 1) {
+        const date = new Date(year, month, day);
+        const dateKey = dateToKey(date);
+        const record = missionHistory[dateKey];
+        const state = getActivityDayState(dateKey, date);
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = `activity-calendar-day activity-calendar-day--${state}`;
+        button.dataset.date = dateKey;
+        button.setAttribute("aria-pressed", String(activityMapSelectedDate === dateKey));
+        const dayName = date.toLocaleDateString("en-US", { weekday: "long" });
+        const stateLabels = {
+            completed: "gym visit completed",
+            missed: "missed gym day",
+            upcoming: "upcoming gym day",
+            none: "no scheduled gym"
+        };
+        button.setAttribute("aria-label", `${dayName}, ${date.toLocaleDateString("en-US", {
+            month: "long",
+            day: "numeric",
+            year: "numeric"
+        })}, ${stateLabels[state]}`);
+        const dateNumber = document.createElement("span");
+        dateNumber.textContent = String(day);
+        const indicator = document.createElement("span");
+        indicator.className = "activity-calendar-day-indicator";
+        indicator.setAttribute("aria-hidden", "true");
+        indicator.textContent = state === "completed" ? "✓" : state === "missed" ? "!" : state === "upcoming" ? "•" : "";
+        button.append(dateNumber, indicator);
+        button.addEventListener("click", () => {
+            activityMapSelectedDate = dateKey;
+            renderMissionActivityMap();
+        });
+        grid.append(button);
+    }
+
+    const trailingDays = (7 - (firstWeekdayOffset + daysInMonth) % 7) % 7;
+    for (let index = 0; index < trailingDays; index += 1) {
+        const emptyDay = document.createElement("span");
+        emptyDay.className = "activity-calendar-empty";
+        emptyDay.setAttribute("aria-hidden", "true");
+        grid.append(emptyDay);
+    }
+
+    renderActivitySelectedDate();
+}
+
 function renderMissionHistoryList() {
     const { recordsList, emptyMessage } = getHistoryElements();
     if (!recordsList || !emptyMessage) {
@@ -960,8 +1113,9 @@ function renderMissionHistoryList() {
         const selectButton = document.createElement("button");
         selectButton.className = "history-record-select";
         selectButton.type = "button";
-        const attendedClasses = record.lessons.filter(lesson => lesson.attended).length;
-        selectButton.textContent = `${formatSpecialDate(date)} · ${record.gymVisited ? "Gym visit" : "No gym visit"} · ${attendedClasses} classes`;
+        const attendedClasses = getAttendedLessonCount(record);
+        const classLabel = attendedClasses === 1 ? "class" : "classes";
+        selectButton.textContent = `${formatSpecialDate(date)} · ${attendedClasses} ${classLabel}`;
         selectButton.addEventListener("click", () => {
             const { dateInput, status } = getHistoryElements();
             dateInput.value = date;
@@ -975,88 +1129,17 @@ function renderMissionHistoryList() {
     });
 }
 
-function renderMonthlyMissionReport() {
-    const monthInput = document.getElementById("reportMonth");
-    const monthLabel = document.getElementById("reportMonthLabel");
-    const visitsElement = document.getElementById("reportGymVisits");
-    const classesElement = document.getElementById("reportClassesAttended");
-    const rateElement = document.getElementById("reportAttendanceRate");
-    const plannedElement = document.getElementById("reportPlannedDays");
-    const missedElement = document.getElementById("reportMissedDays");
-    if (!monthInput || !monthLabel || !visitsElement || !classesElement ||
-        !rateElement || !plannedElement || !missedElement) {
-        return;
-    }
-
-    const match = /^(\d{4})-(\d{2})$/.exec(monthInput.value);
-    if (!match) {
-        return;
-    }
-    const year = Number(match[1]);
-    const month = Number(match[2]);
-    if (month < 1 || month > 12) {
-        return;
-    }
-
-    const monthPrefix = `${match[1]}-${match[2]}-`;
-    const today = new Date();
-    const todayKey = dateToKey(today);
-    const currentMonth = todayKey.slice(0, 7);
-    const selectedMonth = monthPrefix.slice(0, 7);
-    const daysInMonth = new Date(year, month, 0).getDate();
-    const elapsedDays = selectedMonth < currentMonth
-        ? daysInMonth
-        : selectedMonth === currentMonth
-            ? today.getDate()
-            : 0;
-    const plannedDates = new Set();
-    for (let day = 1; day <= elapsedDays; day += 1) {
-        const dateKey = `${monthPrefix}${String(day).padStart(2, "0")}`;
-        const record = missionHistory[dateKey];
-        if (record) {
-            if (record.plannedGym) {
-                plannedDates.add(dateKey);
-            }
-        } else if (hasPlannedGymSchedule(
-            getMissionHistoryScheduleForDate(parseLocalDate(dateKey))
-        )) {
-            plannedDates.add(dateKey);
-        }
-    }
-
-    const monthRecords = Object.values(missionHistory).filter(record => record.date.startsWith(monthPrefix));
-    const visits = monthRecords.filter(record => record.gymVisited).length;
-    const attendedClasses = monthRecords.reduce((total, record) =>
-        total + record.lessons.filter(lesson => lesson.attended).length, 0);
-    const plannedDays = plannedDates.size;
-    const missedDays = [...plannedDates].filter(dateKey =>
-        dateKey < todayKey && !missionHistory[dateKey]?.gymVisited
-    ).length;
-    monthLabel.textContent = new Date(year, month - 1, 1).toLocaleDateString("en-US", {
-        month: "long",
-        year: "numeric"
-    });
-    visitsElement.textContent = String(visits);
-    classesElement.textContent = String(attendedClasses);
-    rateElement.textContent = `${plannedDays ? Math.round(visits / plannedDays * 100) : 0}%`;
-    plannedElement.textContent = String(plannedDays);
-    missedElement.textContent = String(missedDays);
-}
-
 function initializeMissionHistory() {
     const elements = getHistoryElements();
-    const monthInput = document.getElementById("reportMonth");
-    if (!elements.dateInput || !elements.scheduleSummary || !elements.gymCheckbox ||
+    if (!elements.dateInput || !elements.scheduleSummary ||
         !elements.lessonList || !elements.saveButton || !elements.deleteButton ||
-        !elements.status || !elements.recordsList || !elements.emptyMessage || !monthInput) {
+        !elements.status || !elements.recordsList || !elements.emptyMessage) {
         return;
     }
 
     const loaded = loadMissionHistory();
     missionHistory = loaded.records;
     elements.dateInput.value = dateToKey(new Date());
-    const now = new Date();
-    monthInput.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
     elements.dateInput.addEventListener("change", () => {
         elements.status.textContent = "";
         renderMissionHistoryDate();
@@ -1085,7 +1168,6 @@ function initializeMissionHistory() {
             ...missionHistory,
             [dateKey]: {
                 date: dateKey,
-                gymVisited: elements.gymCheckbox.checked,
                 plannedGym,
                 lessons,
                 updatedAt: new Date().toISOString()
@@ -1098,7 +1180,7 @@ function initializeMissionHistory() {
         missionHistory = updatedRecords;
         renderMissionHistoryDate();
         renderMissionHistoryList();
-        renderMonthlyMissionReport();
+        renderMissionActivityMap();
         elements.status.textContent = "Mission history saved.";
     });
     elements.deleteButton.addEventListener("click", () => {
@@ -1115,14 +1197,66 @@ function initializeMissionHistory() {
         missionHistory = updatedRecords;
         renderMissionHistoryDate();
         renderMissionHistoryList();
-        renderMonthlyMissionReport();
+        renderMissionActivityMap();
         elements.status.textContent = "Mission history record deleted.";
     });
-    monthInput.addEventListener("change", renderMonthlyMissionReport);
     renderMissionHistoryDate();
     renderMissionHistoryList();
-    renderMonthlyMissionReport();
     elements.status.textContent = loaded.error;
+}
+
+function initializeMissionActivityMap() {
+    const {
+        grid,
+        monthlyClassesAttended,
+        selectedTitle,
+        selectedDetails,
+        editHistoryButton
+    } = getActivityMapElements();
+    const previousButton = document.getElementById("activityMapPreviousMonth");
+    const nextButton = document.getElementById("activityMapNextMonth");
+    if (!grid || !monthlyClassesAttended || !selectedTitle || !selectedDetails || !editHistoryButton ||
+        !previousButton || !nextButton) {
+        return;
+    }
+
+    const now = new Date();
+    activityMapMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    activityMapSelectedDate = dateToKey(now);
+    previousButton.addEventListener("click", () => {
+        activityMapMonth = new Date(
+            activityMapMonth.getFullYear(),
+            activityMapMonth.getMonth() - 1,
+            1
+        );
+        activityMapSelectedDate = "";
+        renderMissionActivityMap();
+    });
+    nextButton.addEventListener("click", () => {
+        activityMapMonth = new Date(
+            activityMapMonth.getFullYear(),
+            activityMapMonth.getMonth() + 1,
+            1
+        );
+        activityMapSelectedDate = "";
+        renderMissionActivityMap();
+    });
+    editHistoryButton.addEventListener("click", () => {
+        const historyDate = document.getElementById("historyDate");
+        const historyStatus = document.getElementById("historyStatus");
+        const historyCard = document.getElementById("missionHistoryCard");
+        if (!historyDate || !parseLocalDate(activityMapSelectedDate)) {
+            return;
+        }
+        historyDate.value = activityMapSelectedDate;
+        if (historyStatus) {
+            historyStatus.textContent = "";
+        }
+        renderMissionHistoryDate();
+        historyCard?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+        historyDate.focus?.();
+    });
+    renderMissionActivityMap();
 }
 
 function initializeTabNavigation() {
@@ -1174,6 +1308,7 @@ function initializeTabNavigation() {
 applySpecialSchedules();
 initializeTabNavigation();
 initializeMissionHistory();
+initializeMissionActivityMap();
 initializeSpecialScheduleManagement();
 updateMissionDisplay();
 setInterval(updateMissionDisplay, 1000);

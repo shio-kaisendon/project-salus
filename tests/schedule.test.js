@@ -143,11 +143,12 @@ function createSpecialScheduleContext(storage, fixedNow = [2026, 10, 2, 10, 0]) 
         "nextMissionEmoji", "nextMissionName", "result", "startDate", "endDate",
         "missionTabButton", "reviewTabButton", "calendarTabButton",
         "missionTab", "reviewTab", "calendarTab", "historyDate",
-        "historyScheduleSummary", "gymVisitCheckbox", "historyLessonList",
+        "historyScheduleSummary", "historyLessonList",
         "saveHistoryButton", "deleteHistoryButton", "historyStatus",
-        "missionHistoryList", "missionHistoryEmpty", "reportMonth",
-        "reportMonthLabel", "reportGymVisits", "reportClassesAttended",
-        "reportAttendanceRate", "reportPlannedDays", "reportMissedDays",
+        "missionHistoryList", "missionHistoryEmpty",
+        "missionActivityMapCard", "activityMapPreviousMonth", "activityMapNextMonth",
+        "activityMapMonth", "activityMonthlyClassesAttended", "activityCalendarGrid", "activitySelectedDateTitle",
+        "activitySelectedDetails", "activityEditHistoryButton", "missionHistoryCard",
         "calendarButton", "specialScheduleButton", "specialScheduleDialog",
         "specialScheduleForm", "specialDateSchedules", "specialScheduleMessage",
         "specialStartDate", "specialEndDate",
@@ -563,7 +564,7 @@ test("special schedules are independent by date and preserve drafts across range
     )), ["🚗", "🕺", ""]);
 });
 
-test("mission history records regular and special attendance and feeds the monthly report", () => {
+test("mission history derives gym attendance from regular and special lesson records", () => {
     const storage = new Map([[
         "project-salus-special-schedules",
         JSON.stringify({
@@ -577,18 +578,9 @@ test("mission history records regular and special attendance and feeds the month
     const historyDate = elements.get("historyDate");
     const lessonList = elements.get("historyLessonList");
     const saveButton = elements.get("saveHistoryButton");
-    const report = () => ({
-        visits: elements.get("reportGymVisits").textContent,
-        classes: elements.get("reportClassesAttended").textContent,
-        rate: elements.get("reportAttendanceRate").textContent,
-        planned: elements.get("reportPlannedDays").textContent,
-        missed: elements.get("reportMissedDays").textContent
-    });
-
     historyDate.value = "2026-11-10";
     historyDate.emit("change");
     assert.deepEqual(lessonList.children.map(row => row.lessonName), ["ZUMBA", "DARK BOX"]);
-    elements.get("gymVisitCheckbox").checked = true;
     lessonList.children[0].attendanceCheckbox.checked = true;
     lessonList.children[1].attendanceCheckbox.checked = true;
     saveButton.emit("click");
@@ -596,81 +588,193 @@ test("mission history records regular and special attendance and feeds the month
     const stored = JSON.parse(storage.get("project-salus-mission-history"));
     assert.equal(stored.version, 1);
     assert.equal(stored.records["2026-11-10"].plannedGym, true);
-    assert.equal(stored.records["2026-11-10"].gymVisited, true);
+    assert.equal("gymVisited" in stored.records["2026-11-10"], false);
     assert.deepEqual(stored.records["2026-11-10"].lessons.map(lesson => [
         lesson.name, lesson.attended
     ]), [["ZUMBA", true], ["DARK BOX", true]]);
-    assert.deepEqual(report(), {
-        visits: "1",
-        classes: "2",
-        rate: "8%",
-        planned: "13",
-        missed: "12"
-    });
+    assert.equal(elements.get("activityMonthlyClassesAttended").textContent, "2");
+    assert.equal(
+        elements.get("missionHistoryList").children[0].children[0].textContent,
+        "Tue, Nov 10, 2026 · 2 classes"
+    );
+    assert.match(elements.get("activityCalendarGrid").children
+        .find(day => day.dataset.date === "2026-11-10").className, /--completed$/);
 
     historyDate.value = "2026-11-11";
     historyDate.emit("change");
     assert.deepEqual(lessonList.children.map(row => row.lessonName), ["Open Gym"]);
-    elements.get("gymVisitCheckbox").checked = true;
     lessonList.children[0].attendanceCheckbox.checked = true;
     saveButton.emit("click");
-    assert.deepEqual(report(), {
-        visits: "2",
-        classes: "3",
-        rate: "15%",
-        planned: "13",
-        missed: "11"
-    });
+    assert.equal(elements.get("activityMonthlyClassesAttended").textContent, "3");
 
     elements.get("specialScheduleList").children[0].children[1].emit("click");
     const afterScheduleRemoval = JSON.parse(storage.get("project-salus-mission-history"));
     assert.equal(afterScheduleRemoval.records["2026-11-11"].lessons[0].name, "Open Gym");
-    assert.deepEqual(report(), {
-        visits: "2",
-        classes: "3",
-        rate: "15%",
-        planned: "13",
-        missed: "11"
-    });
 
     const regularRecord = elements.get("missionHistoryList").children[1].children[0];
     regularRecord.emit("click");
     assert.equal(historyDate.value, "2026-11-10");
-    assert.equal(elements.get("gymVisitCheckbox").checked, true);
     assert.equal(lessonList.children[0].attendanceCheckbox.checked, true);
     lessonList.children[0].attendanceCheckbox.checked = false;
     saveButton.emit("click");
-    assert.deepEqual(report(), {
-        visits: "2",
-        classes: "2",
-        rate: "15%",
-        planned: "13",
-        missed: "11"
-    });
+    assert.equal(elements.get("activityMonthlyClassesAttended").textContent, "2");
+    assert.match(elements.get("activityCalendarGrid").children
+        .find(day => day.dataset.date === "2026-11-10").className, /--completed$/);
 
     const reloaded = createSpecialScheduleContext(storage, [2026, 10, 29, 10, 0]);
     const reloadedHistoryDate = reloaded.elements.get("historyDate");
     reloadedHistoryDate.value = "2026-11-10";
     reloadedHistoryDate.emit("change");
-    assert.equal(reloaded.elements.get("gymVisitCheckbox").checked, true);
     assert.equal(reloaded.elements.get("historyLessonList").children[0].attendanceCheckbox.checked, false);
+    assert.equal(reloaded.elements.get("activityMonthlyClassesAttended").textContent, "2");
     reloaded.elements.get("calendarTabButton").emit("click");
     reloaded.elements.get("reviewTabButton").emit("click");
     assert.equal(reloadedHistoryDate.value, "2026-11-10");
     assert.equal(reloaded.elements.get("historyLessonList").children[0].attendanceCheckbox.checked, false);
 
-    const reportMonth = reloaded.elements.get("reportMonth");
-    reportMonth.value = "2026-10";
-    reportMonth.emit("change");
-    assert.equal(reloaded.elements.get("reportGymVisits").textContent, "0");
-    assert.equal(reloaded.elements.get("reportClassesAttended").textContent, "0");
-    assert.notEqual(reloaded.elements.get("reportPlannedDays").textContent, "0");
-    reportMonth.value = "2026-11";
-    reportMonth.emit("change");
     reloaded.elements.get("deleteHistoryButton").emit("click");
     const afterDelete = JSON.parse(storage.get("project-salus-mission-history"));
     assert.equal(afterDelete.records["2026-11-10"], undefined);
     assert.ok(afterDelete.records["2026-11-11"]);
+    assert.equal(reloaded.elements.get("activityMonthlyClassesAttended").textContent, "1");
+});
+
+test("saved mission history labels show attended class counts with correct singular grammar", () => {
+    const record = (date, lessons, gymVisited) => ({
+        date,
+        gymVisited,
+        plannedGym: true,
+        lessons,
+        updatedAt: "2026-11-13T12:00:00.000Z"
+    });
+    const storage = new Map([[
+        "project-salus-mission-history",
+        JSON.stringify({
+            version: 1,
+            records: {
+                "2026-11-13": record("2026-11-13", [], true),
+                "2026-11-09": record("2026-11-09", [
+                    { id: "lesson-zumba", name: "ZUMBA", attended: true }
+                ], false),
+                "2026-11-03": record("2026-11-03", [
+                    { id: "lesson-zumba", name: "ZUMBA", attended: true },
+                    { id: "lesson-dark-box", name: "DARK BOX", attended: true }
+                ], false)
+            }
+        })
+    ]]);
+    const { elements } = createSpecialScheduleContext(storage, [2026, 10, 14, 10, 0]);
+
+    assert.deepEqual(elements.get("missionHistoryList").children.map(item =>
+        item.children[0].textContent
+    ), [
+        "Fri, Nov 13, 2026 · 0 classes",
+        "Mon, Nov 9, 2026 · 1 class",
+        "Tue, Nov 3, 2026 · 2 classes"
+    ]);
+    assert.equal(storage.get("project-salus-mission-history"), JSON.stringify({
+        version: 1,
+        records: {
+            "2026-11-13": record("2026-11-13", [], true),
+            "2026-11-09": record("2026-11-09", [
+                { id: "lesson-zumba", name: "ZUMBA", attended: true }
+            ], false),
+            "2026-11-03": record("2026-11-03", [
+                { id: "lesson-zumba", name: "ZUMBA", attended: true },
+                { id: "lesson-dark-box", name: "DARK BOX", attended: true }
+            ], false)
+        }
+    }));
+});
+
+test("monthly class count follows the selected month and updates after edit, delete, and reload", () => {
+    const makeRecord = (date, lessons, legacyGymVisited = false) => ({
+        date,
+        gymVisited: legacyGymVisited,
+        plannedGym: true,
+        lessons,
+        updatedAt: "2026-11-10T12:00:00.000Z"
+    });
+    const storage = new Map([[
+        "project-salus-mission-history",
+        JSON.stringify({
+            version: 1,
+            records: {
+                "2026-11-03": makeRecord("2026-11-03", [
+                    { id: "lesson-zumba", name: "ZUMBA", attended: true },
+                    { id: "lesson-dark-box", name: "DARK BOX", attended: false },
+                    { id: "lesson-zumba", name: "ZUMBA", attended: true }
+                ], true),
+                "2026-11-10": makeRecord("2026-11-10", [
+                    { id: "lesson-zumba", name: "ZUMBA", attended: true },
+                    { id: "lesson-dark-box", name: "DARK BOX", attended: true }
+                ]),
+                "2026-10-13": makeRecord("2026-10-13", [
+                    { id: "lesson-megadanz", name: "MEGADANZ", attended: true }
+                ])
+            }
+        })
+    ]]);
+    const { elements } = createSpecialScheduleContext(storage, [2026, 10, 10, 10, 0]);
+    const count = () => elements.get("activityMonthlyClassesAttended").textContent;
+
+    assert.equal(count(), "3");
+    elements.get("activityMapPreviousMonth").emit("click");
+    assert.equal(elements.get("activityMapMonth").textContent, "October 2026");
+    assert.equal(count(), "1");
+    elements.get("activityMapNextMonth").emit("click");
+    assert.equal(elements.get("activityMapMonth").textContent, "November 2026");
+    assert.equal(count(), "3");
+
+    const historyDate = elements.get("historyDate");
+    historyDate.value = "2026-11-10";
+    historyDate.emit("change");
+    const lessonList = elements.get("historyLessonList");
+    lessonList.children[0].attendanceCheckbox.checked = false;
+    elements.get("saveHistoryButton").emit("click");
+    assert.equal(count(), "2");
+    elements.get("deleteHistoryButton").emit("click");
+    assert.equal(count(), "1");
+
+    const reloaded = createSpecialScheduleContext(storage, [2026, 10, 10, 10, 0]);
+    assert.equal(reloaded.elements.get("activityMonthlyClassesAttended").textContent, "1");
+});
+
+test("legacy gym-only records are preserved but do not count as visits", () => {
+    const legacy = {
+        version: 1,
+        records: {
+            "2026-11-03": {
+                date: "2026-11-03",
+                gymVisited: true,
+                plannedGym: true,
+                lessons: [],
+                updatedAt: "2026-11-03T12:00:00.000Z"
+            }
+        }
+    };
+    const serializedLegacy = JSON.stringify(legacy);
+    const storage = new Map([["project-salus-mission-history", serializedLegacy]]);
+    const { elements } = createSpecialScheduleContext(storage, [2026, 10, 10, 10, 0]);
+    const dateButton = elements.get("activityCalendarGrid").children
+        .find(day => day.dataset.date === "2026-11-03");
+
+    assert.match(dateButton.className, /--missed$/);
+    assert.equal(elements.get("activityMonthlyClassesAttended").textContent, "0");
+    assert.equal(storage.get("project-salus-mission-history"), serializedLegacy);
+
+    elements.get("historyDate").value = "2026-11-10";
+    elements.get("historyDate").emit("change");
+    elements.get("saveHistoryButton").emit("click");
+    const savedAfterEdit = JSON.parse(storage.get("project-salus-mission-history"));
+    assert.equal(savedAfterEdit.records["2026-11-03"].gymVisited, true);
+    assert.equal("gymVisited" in savedAfterEdit.records["2026-11-10"], false);
+
+    const html = readFileSync(path.join(__dirname, "../index.html"), "utf8");
+    assert.doesNotMatch(html, /id="gymVisitCheckbox"/);
+    assert.doesNotMatch(html, /MONTHLY MISSION REPORT|id="reportMonth"/);
+    assert.ok(html.indexOf("MISSION ACTIVITY MAP") < html.indexOf("MISSION HISTORY"));
+    assert.equal(html.includes("MONTHLY MISSION REPORT"), false);
 });
 
 test("mission history looks up November 3 and regular Tuesdays by local weekday", () => {
@@ -738,71 +842,229 @@ test("explicit holiday closure still suppresses the history schedule lookup", ()
     );
 });
 
-test("monthly attendance excludes future plans and does not miss today's schedule", () => {
-    const { elements } = createSpecialScheduleContext(new Map(), [2026, 10, 10, 10, 0]);
-    const dateInput = elements.get("historyDate");
-    const saveButton = elements.get("saveHistoryButton");
-    const recordVisit = (date, attended) => {
-        dateInput.value = date;
-        dateInput.emit("change");
-        elements.get("gymVisitCheckbox").checked = attended;
-        saveButton.emit("click");
-    };
-    const reportFor = month => {
-        elements.get("reportMonth").value = month;
-        elements.get("reportMonth").emit("change");
-        return {
-            visits: elements.get("reportGymVisits").textContent,
-            rate: elements.get("reportAttendanceRate").textContent,
-            planned: elements.get("reportPlannedDays").textContent,
-            missed: elements.get("reportMissedDays").textContent
-        };
-    };
+test("mission activity map lays out month boundaries and navigates without changing history", () => {
+    const storage = new Map();
+    const { context, elements } = createSpecialScheduleContext(storage, [2026, 10, 10, 10, 0]);
+    const grid = elements.get("activityCalendarGrid");
+    const dateButtons = () => grid.children.filter(child => child.dataset.date);
 
-    recordVisit("2026-11-03", true);
-    recordVisit("2026-11-10", false);
-    assert.deepEqual(reportFor("2026-11"), {
-        visits: "1",
-        rate: "20%",
-        planned: "5",
-        missed: "3"
-    });
+    assert.equal(elements.get("activityMapMonth").textContent, "November 2026");
+    assert.equal(elements.get("activityMonthlyClassesAttended").textContent, "0");
+    assert.equal(grid.children.length, 42);
+    assert.deepEqual(grid.children.slice(0, 6).map(child => child.className), Array(6).fill("activity-calendar-empty"));
+    assert.equal(grid.children[6].dataset.date, "2026-11-01");
+    assert.equal(grid.children[35].dataset.date, "2026-11-30");
+    assert.equal(dateButtons().length, 30);
 
-    recordVisit("2026-10-05", true);
-    assert.deepEqual(reportFor("2026-10"), {
-        visits: "1",
-        rate: "8%",
-        planned: "13",
-        missed: "12"
-    });
+    elements.get("activityMapPreviousMonth").emit("click");
+    assert.equal(elements.get("activityMapMonth").textContent, "October 2026");
+    assert.equal(grid.children.length, 35);
+    assert.equal(grid.children[3].dataset.date, "2026-10-01");
+    assert.equal(grid.children[33].dataset.date, "2026-10-31");
+    elements.get("activityMapPreviousMonth").emit("click");
+    assert.equal(elements.get("activityMapMonth").textContent, "September 2026");
+    assert.equal(dateButtons().length, 30);
+    elements.get("activityMapPreviousMonth").emit("click");
+    assert.equal(elements.get("activityMapMonth").textContent, "August 2026");
+    assert.equal(grid.children.length, 42);
+    assert.equal(dateButtons().length, 31);
 
-    assert.deepEqual(reportFor("2026-12"), {
-        visits: "0",
-        rate: "0%",
-        planned: "0",
-        missed: "0"
-    });
+    elements.get("activityMapNextMonth").emit("click");
+    assert.equal(elements.get("activityMapMonth").textContent, "September 2026");
+    vm.runInContext(
+        "activityMapMonth = new Date(2024, 1, 1); activityMapSelectedDate = ''; renderMissionActivityMap();",
+        context
+    );
+    assert.equal(elements.get("activityMapMonth").textContent, "February 2024");
+    assert.equal(grid.children.length, 35);
+    assert.equal(grid.children[3].dataset.date, "2024-02-01");
+    assert.equal(grid.children[31].dataset.date, "2024-02-29");
+    vm.runInContext(
+        "activityMapMonth = new Date(2026, 1, 1); activityMapSelectedDate = ''; renderMissionActivityMap();",
+        context
+    );
+    assert.equal(elements.get("activityMapMonth").textContent, "February 2026");
+    assert.equal(grid.children.length, 35);
+    assert.equal(dateButtons().length, 28);
+    assert.deepEqual([...storage.entries()], []);
+    assert.equal(elements.get("historyDate").value, "2026-11-10");
+
+    const html = readFileSync(path.join(__dirname, "../index.html"), "utf8");
+    assert.ok(html.indexOf("MISSION ACTIVITY MAP") < html.indexOf("MISSION HISTORY"));
+    assert.ok(html.indexOf("MISSION ACTIVITY MAP") < html.indexOf("MISSION HISTORY"));
+    assert.equal(html.includes("MONTHLY MISSION REPORT"), false);
 });
 
-test("monthly report safely handles zero planned days and malformed history data", () => {
+test("tab navigation stays in document flow below the safe area with accessible tap targets", () => {
+    const html = readFileSync(path.join(__dirname, "../index.html"), "utf8");
+    const stylesheet = readFileSync(path.join(__dirname, "../style.css"), "utf8");
+    const navigationStart = html.indexOf('<nav class="tab-navigation"');
+
+    assert.ok(navigationStart >= 0);
+    assert.ok(navigationStart < html.indexOf("<main>"));
+    assert.match(html, /name="viewport" content="[^"]*viewport-fit=cover/);
+    assert.match(stylesheet, /body\s*\{[^}]*padding:\s*max\(20px,\s*env\(safe-area-inset-top\)\)/s);
+    assert.match(stylesheet, /\.tab-button\s*\{[^}]*min-width:\s*44px;[^}]*min-height:\s*48px;/s);
+
+    const navigationRule = stylesheet.match(/\.tab-navigation\s*\{([^}]*)\}/)?.[1] || "";
+    assert.doesNotMatch(navigationRule, /position:\s*(?:fixed|sticky)/);
+});
+
+test("mission activity map uses the current schedule instead of saved planned-day snapshots", () => {
+    const record = (date, plannedGym) => ({
+        date,
+        gymVisited: false,
+        plannedGym,
+        lessons: [],
+        updatedAt: "2026-11-10T12:00:00.000Z"
+    });
+    const storage = new Map([[
+        "project-salus-mission-history",
+        JSON.stringify({
+            version: 1,
+            records: {
+                "2026-11-03": record("2026-11-03", false),
+                "2026-11-17": record("2026-11-17", false)
+            }
+        })
+    ]]);
+    const { context, elements } = createSpecialScheduleContext(storage, [2026, 10, 10, 10, 0]);
+    const calendarDay = date => elements.get("activityCalendarGrid")
+        .children.find(child => child.dataset.date === date);
+
+    assert.match(calendarDay("2026-11-03").className, /--missed$/);
+    assert.match(calendarDay("2026-11-17").className, /--upcoming$/);
+
+    vm.runInContext(
+        'window.SALUS_SCHEDULE = createScheduleEngine({' +
+        'holidayPolicyOverrides: [{ date: "2026-11-03", policy: "closed" }]});' +
+        "renderMissionActivityMap();",
+        context
+    );
+    assert.match(calendarDay("2026-11-03").className, /--none$/);
+});
+
+test("mission activity map derives attendance from lessons and links read-only date details", () => {
+    const record = (date, gymVisited, lessons = []) => ({
+        date,
+        gymVisited,
+        plannedGym: true,
+        lessons,
+        updatedAt: "2026-11-10T12:00:00.000Z"
+    });
+    const storage = new Map([
+        ["project-salus-mission-history", JSON.stringify({
+            version: 1,
+            records: {
+                "2026-11-03": record("2026-11-03", true, [
+                    { id: "lesson-zumba", name: "ZUMBA", attended: true },
+                    { id: "lesson-dark-box", name: "DARK BOX", attended: false }
+                ]),
+                "2026-11-06": record("2026-11-06", true),
+                "2026-11-10": record("2026-11-10", false),
+                "2026-11-13": record("2026-11-13", false)
+            }
+        })],
+        ["project-salus-special-schedules", JSON.stringify({
+            "2026-11-11": {
+                departure: { time: "09:30" },
+                lessons: [{ name: "SPECIAL CLASS", start: "10:00", end: "10:45" }]
+            }
+        })]
+    ]);
+    const { elements } = createSpecialScheduleContext(storage, [2026, 10, 10, 10, 0]);
+    const calendarDay = date => elements.get("activityCalendarGrid")
+        .children.find(child => child.dataset.date === date);
+
+    assert.match(calendarDay("2026-11-03").className, /--completed$/);
+    assert.match(calendarDay("2026-11-06").className, /--missed$/);
+    assert.match(calendarDay("2026-11-09").className, /--missed$/);
+    assert.match(calendarDay("2026-11-10").className, /--upcoming$/);
+    assert.match(calendarDay("2026-11-13").className, /--upcoming$/);
+    assert.match(calendarDay("2026-11-11").className, /--upcoming$/);
+    assert.match(calendarDay("2026-11-12").className, /--none$/);
+    assert.match(calendarDay("2026-11-13").attributes["aria-label"], /upcoming gym day/);
+
+    calendarDay("2026-11-03").emit("click");
+    assert.match(elements.get("activitySelectedDateTitle").textContent, /Tuesday, November 3, 2026/);
+    assert.deepEqual(elements.get("activitySelectedDetails").children.map(child => child.textContent), [
+        "Attendance record saved."
+    ]);
+    assert.equal(elements.get("activityEditHistoryButton").textContent, "View / Edit Record");
+    elements.get("activityMapPreviousMonth").emit("click");
+    assert.equal(elements.get("activitySelectedDateTitle").textContent, "Select a date");
+    assert.equal(elements.get("activityEditHistoryButton").hidden, true);
+    elements.get("activityMapNextMonth").emit("click");
+    const beforeTap = JSON.stringify([...storage.entries()]);
+    calendarDay("2026-11-09").emit("click");
+    assert.deepEqual(elements.get("activitySelectedDetails").children.map(child => child.textContent), [
+        "No attendance record for this day."
+    ]);
+    assert.equal(elements.get("activityEditHistoryButton").textContent, "Record Attendance");
+    elements.get("activityEditHistoryButton").emit("click");
+    assert.equal(elements.get("historyDate").value, "2026-11-09");
+
+    calendarDay("2026-11-10").emit("click");
+    assert.deepEqual(elements.get("activitySelectedDetails").children.map(child => child.textContent), [
+        "Attendance record saved."
+    ]);
+
+    calendarDay("2026-11-13").emit("click");
+    assert.deepEqual(elements.get("activitySelectedDetails").children.map(child => child.textContent), [
+        "Attendance record saved."
+    ]);
+    assert.equal(elements.get("activityEditHistoryButton").textContent, "View / Edit Record");
+    calendarDay("2026-11-11").emit("click");
+    assert.match(elements.get("activitySelectedDateTitle").textContent, /Wednesday, November 11, 2026/);
+    assert.deepEqual(elements.get("activitySelectedDetails").children.map(child => child.textContent), [
+        "Scheduled for this day."
+    ]);
+    assert.equal(elements.get("activityEditHistoryButton").textContent, "Record Attendance");
+    elements.get("activityEditHistoryButton").emit("click");
+    assert.equal(elements.get("historyDate").value, "2026-11-11");
+    assert.deepEqual(elements.get("historyLessonList").children.map(row => row.lessonName), ["SPECIAL CLASS"]);
+    assert.equal(elements.get("historyLessonList").children[0].attendanceCheckbox.checked, false);
+    assert.equal(storage.get("project-salus-mission-history"), JSON.parse(beforeTap)[0][1]);
+    assert.equal(JSON.parse(storage.get("project-salus-mission-history")).records["2026-11-11"], undefined);
+
+    const holidayContext = createSpecialScheduleContext(new Map(), [2026, 10, 10, 10, 0]);
+    const holidayDay = holidayContext.elements.get("activityCalendarGrid").children
+        .find(child => child.dataset.date === "2026-11-03");
+    assert.match(holidayDay.className, /--missed$/);
+    holidayDay.emit("click");
+    assert.deepEqual(holidayContext.elements.get("activitySelectedDetails").children.map(child =>
+        child.textContent
+    ), ["No attendance record for this day."]);
+});
+
+test("mission activity map shows today's unrecorded message and does not save on selection", () => {
+    const storage = new Map();
+    const { elements } = createSpecialScheduleContext(storage, [2026, 10, 10, 10, 0]);
+    const today = elements.get("activityCalendarGrid").children
+        .find(child => child.dataset.date === "2026-11-10");
+
+    today.emit("click");
+    assert.deepEqual(elements.get("activitySelectedDetails").children.map(child => child.textContent), [
+        "Today’s attendance has not been recorded yet."
+    ]);
+    assert.equal(elements.get("activityEditHistoryButton").textContent, "Record Attendance");
+    assert.deepEqual([...storage.entries()], []);
+
+    elements.get("activityEditHistoryButton").emit("click");
+    assert.equal(elements.get("historyDate").value, "2026-11-10");
+    assert.deepEqual([...storage.entries()], []);
+});
+
+test("invalid saved history reports a read error without removing stored data", () => {
     const storage = new Map([[
         "project-salus-mission-history",
         JSON.stringify({ version: 99, records: { "invalid": {} } })
-    ]]);
+    ]    ]);
     const { context, elements } = createSpecialScheduleContext(storage);
     assert.match(elements.get("historyStatus").textContent, /could not be read/i);
-
-    vm.runInContext(
-        'window.SALUS_SCHEDULE = createScheduleEngine({ weeklySchedule: {} });' +
-        'document.getElementById("reportMonth").value = "2026-11";' +
-        "renderMonthlyMissionReport();",
-        context
-    );
-    assert.equal(elements.get("reportGymVisits").textContent, "0");
-    assert.equal(elements.get("reportClassesAttended").textContent, "0");
-    assert.equal(elements.get("reportAttendanceRate").textContent, "0%");
-    assert.equal(elements.get("reportPlannedDays").textContent, "0");
-    assert.equal(elements.get("reportMissedDays").textContent, "0");
+    assert.equal(storage.get("project-salus-mission-history"),
+        JSON.stringify({ version: 99, records: { invalid: {} } }));
+    assert.equal(vm.runInContext("typeof renderMonthlyMissionReport", context), "undefined");
 });
 
 test("loads existing special schedules from the previous localStorage format", () => {
@@ -980,8 +1242,8 @@ test("Dashboard and category-specific ICS downloads use the same schedule", asyn
     const html = readFileSync(path.join(__dirname, "../index.html"), "utf8");
     assert.match(html, /<article class="glass-card upcoming-gym-day-card" id="upcomingGymDayCard" hidden>/);
     assert.match(html, /<h4>UPCOMING<\/h4>/);
-    assert.match(html, /<link rel="stylesheet" href="style\.css\?v=20261109-review-input-inset">/);
-    assert.match(html, /<script src="script\.js\?v=20261109-mission-history-report"><\/script>/);
+    assert.match(html, /<link rel="stylesheet" href="style\.css\?v=20261109-ipad-tab-spacing">/);
+    assert.match(html, /<script src="script\.js\?v=20261109-mission-activity-map"><\/script>/);
     assert.match(stylesheet, /\.review-card > \.form-group\s*\{[^}]*width:\s*100%;[^}]*min-width:\s*0;[^}]*max-width:\s*100%;[^}]*padding-inline:\s*12px;[^}]*box-sizing:\s*border-box;/s);
     assert.match(stylesheet, /\.review-date-input\s*\{[^}]*width:\s*100%;[^}]*min-width:\s*0;[^}]*max-width:\s*100%;[^}]*box-sizing:\s*border-box;/s);
     assert.match(stylesheet, /\.next-mission-card\s*\{[^}]*justify-content:\s*flex-start;[^}]*align-items:\s*stretch;/s);

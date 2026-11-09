@@ -2,12 +2,12 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>PROJECT SALUS Mission Control</title>
     <meta name="description" content="PROJECT SALUS mission control dashboard for wellness planning and calendar generation.">
     <meta name="theme-color" content="#F7EFE7">
     <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="style.css?v=20261109-review-input-inset">
+    <link rel="stylesheet" href="style.css?v=20261109-ipad-tab-spacing">
 </head>
 <body>
     <div class="app-shell">
@@ -95,7 +95,43 @@
         </section>
 
         <section id="reviewTab" class="tab-panel tab-panel--review" role="tabpanel" aria-labelledby="reviewTabButton" hidden>
-            <section class="card panel review-card" aria-labelledby="mission-history-title">
+            <section id="missionActivityMapCard" class="card panel review-card activity-map-card" aria-labelledby="mission-activity-map-title">
+                <div class="card-heading">
+                    <div>
+                        <p class="eyebrow">Monthly attendance</p>
+                        <h3 id="mission-activity-map-title">MISSION ACTIVITY MAP</h3>
+                    </div>
+                    <span class="card-badge">ACTIVITY</span>
+                </div>
+                <div class="activity-map-controls">
+                    <button id="activityMapPreviousMonth" class="activity-month-button" type="button" aria-label="Previous month">‹</button>
+                    <h4 id="activityMapMonth" aria-live="polite"></h4>
+                    <button id="activityMapNextMonth" class="activity-month-button" type="button" aria-label="Next month">›</button>
+                </div>
+                <div class="activity-monthly-classes" aria-live="polite" aria-label="Classes attended this month">
+                    <strong id="activityMonthlyClassesAttended">0</strong>
+                    <span>CLASSES ATTENDED</span>
+                </div>
+                <div class="activity-weekdays">
+                    <span><abbr title="Monday">MON</abbr></span><span><abbr title="Tuesday">TUE</abbr></span><span><abbr title="Wednesday">WED</abbr></span><span><abbr title="Thursday">THU</abbr></span><span><abbr title="Friday">FRI</abbr></span><span><abbr title="Saturday">SAT</abbr></span><span><abbr title="Sunday">SUN</abbr></span>
+                </div>
+                <div id="activityCalendarGrid" class="activity-calendar-grid" role="group" aria-label="Monthly mission activity calendar"></div>
+                <ul class="activity-map-legend" aria-label="Calendar legend">
+                    <li><span class="activity-legend-swatch activity-legend-swatch--completed" aria-hidden="true">✓</span>Gym visit completed</li>
+                    <li><span class="activity-legend-swatch activity-legend-swatch--missed" aria-hidden="true">!</span>Missed gym day</li>
+                    <li><span class="activity-legend-swatch activity-legend-swatch--upcoming" aria-hidden="true">•</span>Upcoming gym day</li>
+                    <li><span class="activity-legend-swatch activity-legend-swatch--none" aria-hidden="true"></span>No scheduled gym</li>
+                </ul>
+                <section class="activity-day-details" aria-live="polite" aria-labelledby="activitySelectedDateTitle">
+                    <h4 id="activitySelectedDateTitle">Select a date</h4>
+                    <div id="activitySelectedDetails">
+                        <p class="activity-details-prompt">Choose a calendar date to review its schedule and attendance.</p>
+                    </div>
+                    <button id="activityEditHistoryButton" class="secondary-button" type="button" hidden>Edit in Mission History</button>
+                </section>
+            </section>
+
+            <section id="missionHistoryCard" class="card panel review-card" aria-labelledby="mission-history-title">
                 <div class="card-heading">
                     <div>
                         <p class="eyebrow">Mission records</p>
@@ -109,10 +145,6 @@
                 </div>
                 <p id="historyScheduleSummary" class="card-copy" aria-live="polite"></p>
                 <div class="history-checklist">
-                    <label class="history-check">
-                        <input id="gymVisitCheckbox" type="checkbox">
-                        <span>Gym Visit</span>
-                    </label>
                     <fieldset class="history-lessons">
                         <legend>Lesson Attendance</legend>
                         <div id="historyLessonList" class="history-lesson-list"></div>
@@ -128,43 +160,6 @@
                     <ul id="missionHistoryList" class="mission-history-list" aria-live="polite"></ul>
                     <p id="missionHistoryEmpty" class="history-empty">No mission history saved.</p>
                 </section>
-            </section>
-
-            <section class="card panel review-card" aria-labelledby="monthly-report-title">
-                <div class="card-heading">
-                    <div>
-                        <p class="eyebrow">Monthly review</p>
-                        <h3 id="monthly-report-title">MONTHLY MISSION REPORT</h3>
-                    </div>
-                    <span class="card-badge">REPORT</span>
-                </div>
-                <div class="form-group">
-                    <label for="reportMonth">Report month</label>
-                    <input id="reportMonth" class="review-date-input" type="month">
-                </div>
-                <p id="reportMonthLabel" class="card-copy"></p>
-                <div class="report-grid">
-                    <article class="report-metric">
-                        <span>Gym Visits</span>
-                        <strong id="reportGymVisits">0</strong>
-                    </article>
-                    <article class="report-metric">
-                        <span>Classes Attended</span>
-                        <strong id="reportClassesAttended">0</strong>
-                    </article>
-                    <article class="report-metric">
-                        <span>Attendance Rate</span>
-                        <strong id="reportAttendanceRate">0%</strong>
-                    </article>
-                    <article class="report-metric">
-                        <span>Planned Days</span>
-                        <strong id="reportPlannedDays">0</strong>
-                    </article>
-                    <article class="report-metric">
-                        <span>Missed Days</span>
-                        <strong id="reportMissedDays">0</strong>
-                    </article>
-                </div>
             </section>
         </section>
 
@@ -244,6 +239,6 @@
     </dialog>
 
     <script src="schedule.js"></script>
-    <script src="script.js?v=20261109-mission-history-report"></script>
+    <script src="script.js?v=20261109-mission-activity-map"></script>
 </body>
 </html>
