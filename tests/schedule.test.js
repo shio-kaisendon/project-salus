@@ -144,6 +144,7 @@ function createSpecialScheduleContext(storage, fixedNow = [2026, 10, 2, 10, 0]) 
         "missionTabButton", "reviewTabButton", "calendarTabButton",
         "missionTab", "reviewTab", "calendarTab", "historyDate",
         "historyScheduleSummary", "historyLessonList",
+        "todayAttendanceStatus",
         "saveHistoryButton", "deleteHistoryButton", "historyStatus",
         "missionHistoryList", "missionHistoryEmpty",
         "missionActivityMapCard", "activityMapPreviousMonth", "activityMapNextMonth",
@@ -639,6 +640,62 @@ test("mission history derives gym attendance from regular and special lesson rec
     assert.equal(reloaded.elements.get("activityMonthlyClassesAttended").textContent, "1");
 });
 
+test("Mission Control lesson checks save attendance, update Gym Visit status, and allow past edits", () => {
+    const storage = new Map();
+    const { elements } = createSpecialScheduleContext(storage, [2026, 10, 10, 10, 0]);
+    const lessonCheckboxes = () => elements.get("todaySchedule").children
+        .filter(row => row.children[0].children[2].className.includes("--lesson"))
+        .map(row => row.children[0].children[2].children[0]);
+    const calendarDay = date => elements.get("activityCalendarGrid").children
+        .find(day => day.dataset.date === date);
+
+    assert.equal(lessonCheckboxes().length, 2);
+    assert.equal(lessonCheckboxes()[0].parentNode.tagName, "label");
+    lessonCheckboxes()[0].checked = true;
+    lessonCheckboxes()[0].emit("change");
+
+    let saved = JSON.parse(storage.get("project-salus-mission-history"));
+    assert.equal(saved.records["2026-11-10"].plannedGym, true);
+    assert.equal("gymVisited" in saved.records["2026-11-10"], false);
+    assert.deepEqual(saved.records["2026-11-10"].lessons.map(lesson => lesson.attended), [true, false]);
+    assert.match(calendarDay("2026-11-10").className, /--completed$/);
+    assert.equal(elements.get("activityMonthlyClassesAttended").textContent, "1");
+    assert.equal(elements.get("todayAttendanceStatus").textContent, "Attendance saved.");
+
+    lessonCheckboxes()[1].checked = true;
+    lessonCheckboxes()[1].emit("change");
+    assert.equal(elements.get("activityMonthlyClassesAttended").textContent, "2");
+    assert.match(elements.get("missionHistoryList").children[0].children[0].textContent, /2 classes$/);
+
+    lessonCheckboxes()[0].checked = false;
+    lessonCheckboxes()[0].emit("change");
+    lessonCheckboxes()[1].checked = false;
+    lessonCheckboxes()[1].emit("change");
+    saved = JSON.parse(storage.get("project-salus-mission-history"));
+    assert.deepEqual(saved.records["2026-11-10"].lessons.map(lesson => lesson.attended), [false, false]);
+    assert.equal(elements.get("activityMonthlyClassesAttended").textContent, "0");
+    assert.doesNotMatch(calendarDay("2026-11-10").className, /--completed$/);
+
+    const historyDate = elements.get("historyDate");
+    historyDate.value = "2026-11-03";
+    historyDate.emit("change");
+    elements.get("historyLessonList").children[0].attendanceCheckbox.checked = true;
+    elements.get("saveHistoryButton").emit("click");
+    assert.match(calendarDay("2026-11-03").className, /--completed$/);
+    assert.equal(elements.get("activityMonthlyClassesAttended").textContent, "1");
+
+    const reloaded = createSpecialScheduleContext(storage, [2026, 10, 10, 10, 0]);
+    assert.equal(
+        reloaded.elements.get("todaySchedule").children
+            .find(row => row.children[0].children[2].textContent === "ZUMBA")
+            .children[0].children[2].children[0].checked,
+        false
+    );
+    reloaded.elements.get("historyDate").value = "2026-11-03";
+    reloaded.elements.get("historyDate").emit("change");
+    assert.equal(reloaded.elements.get("historyLessonList").children[0].attendanceCheckbox.checked, true);
+});
+
 test("saved mission history labels show attended class counts with correct singular grammar", () => {
     const record = (date, lessons, gymVisited) => ({
         date,
@@ -1104,6 +1161,7 @@ test("Dashboard and category-specific ICS downloads use the same schedule", asyn
         tagName,
         children: [],
         attributes: {},
+        listeners: {},
         textContent: "",
         append(...children) {
             this.children.push(...children);
@@ -1114,6 +1172,12 @@ test("Dashboard and category-specific ICS downloads use the same schedule", asyn
         },
         setAttribute(name, value) {
             this.attributes[name] = value;
+        },
+        addEventListener(name, callback) {
+            this.listeners[name] = callback;
+        },
+        emit(name, event = {}) {
+            this.listeners[name]?.(event);
         }
     });
 
@@ -1127,6 +1191,7 @@ test("Dashboard and category-specific ICS downloads use the same schedule", asyn
         "nextMission",
         "nextMissionEmoji",
         "nextMissionName",
+        "todayAttendanceStatus",
         "result"
     ]) {
         elements.set(id, makeElement(id));
@@ -1242,8 +1307,8 @@ test("Dashboard and category-specific ICS downloads use the same schedule", asyn
     const html = readFileSync(path.join(__dirname, "../index.html"), "utf8");
     assert.match(html, /<article class="glass-card upcoming-gym-day-card" id="upcomingGymDayCard" hidden>/);
     assert.match(html, /<h4>UPCOMING<\/h4>/);
-    assert.match(html, /<link rel="stylesheet" href="style\.css\?v=20261109-ipad-tab-spacing">/);
-    assert.match(html, /<script src="script\.js\?v=20261109-mission-activity-map"><\/script>/);
+    assert.match(html, /<link rel="stylesheet" href="style\.css\?v=20261109-lesson-attendance">/);
+    assert.match(html, /<script src="script\.js\?v=20261109-lesson-attendance"><\/script>/);
     assert.match(stylesheet, /\.review-card > \.form-group\s*\{[^}]*width:\s*100%;[^}]*min-width:\s*0;[^}]*max-width:\s*100%;[^}]*padding-inline:\s*12px;[^}]*box-sizing:\s*border-box;/s);
     assert.match(stylesheet, /\.review-date-input\s*\{[^}]*width:\s*100%;[^}]*min-width:\s*0;[^}]*max-width:\s*100%;[^}]*box-sizing:\s*border-box;/s);
     assert.match(stylesheet, /\.next-mission-card\s*\{[^}]*justify-content:\s*flex-start;[^}]*align-items:\s*stretch;/s);

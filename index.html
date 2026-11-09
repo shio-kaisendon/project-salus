@@ -7,7 +7,7 @@
     <meta name="description" content="PROJECT SALUS mission control dashboard for wellness planning and calendar generation.">
     <meta name="theme-color" content="#F7EFE7">
     <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="style.css?v=20261109-ipad-tab-spacing">
+    <link rel="stylesheet" href="style.css?v=20261109-lesson-attendance">
 </head>
 <body>
     <div class="app-shell">
@@ -71,6 +71,8 @@
                         </div>
                         <ul id="todaySchedule" class="mission-list" aria-live="polite">
                         </ul>
+                        <p class="mission-attendance-hint">Check lessons you attended. One or more attended lessons count as a Gym Visit. Edit past dates in Mission History.</p>
+                        <p id="todayAttendanceStatus" class="mission-attendance-status" role="status" aria-live="polite"></p>
                     </article>
 
                     <article class="glass-card next-gym-day-card">
@@ -239,6 +241,6 @@
     </dialog>
 
     <script src="schedule.js"></script>
-    <script src="script.js?v=20261109-mission-activity-map"></script>
+    <script src="script.js?v=20261109-lesson-attendance"></script>
 </body>
 </html>

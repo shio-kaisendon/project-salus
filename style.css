@@ -790,6 +790,26 @@ h2 {
     font-weight: 800;
 }
 
+.mission-item-label--lesson input {
+    flex: 0 0 auto;
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    accent-color: var(--accent);
+}
+
+.mission-attendance-hint,
+.mission-attendance-status {
+    margin-top: 10px;
+    color: var(--sub);
+    font-size: 0.82rem;
+    line-height: 1.5;
+}
+
+.mission-attendance-status:not(:empty) {
+    color: var(--accent-strong);
+}
+
 .mission-item-details {
     grid-column: 3 / -1;
     color: var(--sub);

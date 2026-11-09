@@ -264,7 +264,7 @@ function formatScheduleEvent(event) {
     return { time, label, details };
 }
 
-function renderSchedule(events, scheduleElement, emptyMessage) {
+function renderSchedule(events, scheduleElement, emptyMessage, attendanceDateKey = "") {
     scheduleElement.replaceChildren();
 
     if (events.length === 0) {
@@ -286,11 +286,37 @@ function renderSchedule(events, scheduleElement, emptyMessage) {
         emojiElement.className = "mission-item-emoji";
         emojiElement.setAttribute("aria-hidden", "true");
         emojiElement.textContent = getEventEmoji(event);
-        const labelElement = document.createElement("span");
+        const labelElement = document.createElement(
+            attendanceDateKey && event.type === "lesson" ? "label" : "span"
+        );
         labelElement.className = event.type === "lesson"
             ? "mission-item-label mission-item-label--lesson"
             : "mission-item-label";
         labelElement.textContent = label;
+        if (attendanceDateKey && event.type === "lesson") {
+            const labelText = document.createElement("span");
+            labelText.textContent = label;
+            labelElement.textContent = "";
+            const checkbox = document.createElement("input");
+            checkbox.type = "checkbox";
+            checkbox.checked = isLessonAttended(missionHistory[attendanceDateKey], event);
+            checkbox.setAttribute("aria-label", `Mark ${label} as attended`);
+            checkbox.addEventListener("change", () => {
+                const status = document.getElementById("todayAttendanceStatus");
+                const saved = saveScheduledLessonAttendance(
+                    attendanceDateKey,
+                    event.id,
+                    checkbox.checked,
+                    false
+                );
+                if (status) {
+                    status.textContent = saved
+                        ? "Attendance saved."
+                        : "Could not save attendance in this browser.";
+                }
+            });
+            labelElement.append(checkbox, labelText);
+        }
         main.append(timeElement, emojiElement, labelElement);
         item.append(main);
         if (details) {
@@ -301,6 +327,22 @@ function renderSchedule(events, scheduleElement, emptyMessage) {
         }
         scheduleElement.append(item);
     });
+}
+
+let todayScheduleSignature = "";
+
+function getTodayScheduleSignature(dateKey, events) {
+    return JSON.stringify([
+        dateKey,
+        events.map(event => [
+            event.id,
+            event.type,
+            event.label,
+            event.start,
+            event.end,
+            event.type === "lesson" && isLessonAttended(missionHistory[dateKey], event)
+        ])
+    ]);
 }
 
 function findNextGymDay(now, getScheduleForDate) {
@@ -346,9 +388,14 @@ function updateDashboard(now) {
         return;
     }
 
+    const dateKey = dateToKey(now);
     const events = window.SALUS_SCHEDULE.getScheduleForDate(now)
         .filter(event => event.id !== "preparation");
-    renderSchedule(events, scheduleElement, "No missions scheduled today.");
+    const scheduleSignature = getTodayScheduleSignature(dateKey, events);
+    if (scheduleSignature !== todayScheduleSignature) {
+        renderSchedule(events, scheduleElement, "No missions scheduled today.", dateKey);
+        todayScheduleSignature = scheduleSignature;
+    }
 
     const nextGymDay = findNextGymDay(
         now,
@@ -847,6 +894,17 @@ function getAttendedLessonCount(record) {
     return uniqueLessons.size;
 }
 
+function isLessonAttended(record, event) {
+    const byId = record?.lessons?.find(lesson => lesson.id === event.id);
+    if (byId) {
+        return byId.attended;
+    }
+    return record?.lessons?.some(lesson =>
+        lesson.name.trim().toLocaleLowerCase() === getMissionDisplayName(event).trim().toLocaleLowerCase() &&
+        lesson.attended
+    ) || false;
+}
+
 function persistMissionHistory(records) {
     try {
         window.localStorage.setItem(MISSION_HISTORY_STORAGE_KEY, JSON.stringify({
@@ -857,6 +915,63 @@ function persistMissionHistory(records) {
     } catch {
         return false;
     }
+}
+
+function saveMissionAttendance(dateKey, scheduledEvents, lessons, refreshDashboard = true) {
+    const existingRecord = missionHistory[dateKey];
+    const updatedRecords = {
+        ...missionHistory,
+        [dateKey]: {
+            date: dateKey,
+            plannedGym: existingRecord
+                ? existingRecord.plannedGym
+                : hasPlannedGymSchedule(scheduledEvents),
+            lessons,
+            updatedAt: new Date().toISOString()
+        }
+    };
+    if (!persistMissionHistory(updatedRecords)) {
+        return false;
+    }
+
+    missionHistory = updatedRecords;
+    renderMissionHistoryList();
+    renderMissionActivityMap();
+    const { dateInput } = getHistoryElements();
+    if (dateInput?.value === dateKey) {
+        renderMissionHistoryDate();
+    }
+    if (refreshDashboard) {
+        updateMissionDisplay();
+    } else {
+        const now = new Date();
+        if (dateToKey(now) === dateKey) {
+            const todayEvents = window.SALUS_SCHEDULE.getScheduleForDate(now)
+                .filter(event => event.id !== "preparation");
+            todayScheduleSignature = getTodayScheduleSignature(dateKey, todayEvents);
+        }
+    }
+    return true;
+}
+
+function saveScheduledLessonAttendance(dateKey, lessonId, attended, refreshDashboard = true) {
+    const date = parseLocalDate(dateKey);
+    if (!date) {
+        return false;
+    }
+
+    const scheduledEvents = getMissionHistoryScheduleForDate(date);
+    const existingRecord = missionHistory[dateKey];
+    const lessons = scheduledEvents
+        .filter(event => event.type === "lesson")
+        .map(event => ({
+            id: event.id,
+            name: getMissionDisplayName(event),
+            attended: event.id === lessonId
+                ? attended
+                : isLessonAttended(existingRecord, event)
+        }));
+    return saveMissionAttendance(dateKey, scheduledEvents, lessons, refreshDashboard);
 }
 
 function hasPlannedGymSchedule(events) {
@@ -1153,10 +1268,6 @@ function initializeMissionHistory() {
         }
 
         const scheduledEvents = getMissionHistoryScheduleForDate(date);
-        const existingRecord = missionHistory[dateKey];
-        const plannedGym = existingRecord
-            ? existingRecord.plannedGym
-            : hasPlannedGymSchedule(scheduledEvents);
         const lessons = Array.from(elements.lessonList.children)
             .filter(row => row.attendanceCheckbox)
             .map(row => ({
@@ -1164,23 +1275,11 @@ function initializeMissionHistory() {
                 name: row.lessonName,
                 attended: row.attendanceCheckbox.checked
             }));
-        const updatedRecords = {
-            ...missionHistory,
-            [dateKey]: {
-                date: dateKey,
-                plannedGym,
-                lessons,
-                updatedAt: new Date().toISOString()
-            }
-        };
-        if (!persistMissionHistory(updatedRecords)) {
+        if (!saveMissionAttendance(dateKey, scheduledEvents, lessons)) {
             elements.status.textContent = "Could not save mission history in this browser.";
             return;
         }
-        missionHistory = updatedRecords;
         renderMissionHistoryDate();
-        renderMissionHistoryList();
-        renderMissionActivityMap();
         elements.status.textContent = "Mission history saved.";
     });
     elements.deleteButton.addEventListener("click", () => {
