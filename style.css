@@ -40,6 +40,76 @@ body {
     padding: 8px 0 40px;
 }
 
+.tab-navigation {
+    display: flex;
+    gap: 6px;
+    width: fit-content;
+    max-width: 100%;
+    margin: 0 auto 18px;
+    padding: 5px;
+    border: 1px solid rgba(255, 255, 255, 0.78);
+    border-radius: 999px;
+    background: rgba(255, 250, 243, 0.64);
+    box-shadow: 0 8px 22px rgba(73, 44, 24, 0.08);
+    backdrop-filter: blur(18px) saturate(140%);
+    -webkit-backdrop-filter: blur(18px) saturate(140%);
+}
+
+.tab-button {
+    min-height: 44px;
+    padding: 0 18px;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--sub);
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 750;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background var(--transition), color var(--transition), box-shadow var(--transition);
+}
+
+.tab-button[aria-selected="true"] {
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
+    color: white;
+    box-shadow: 0 6px 14px rgba(143, 85, 40, 0.22);
+}
+
+.tab-button:focus-visible,
+.history-check input:focus-visible,
+.history-lesson-check input:focus-visible {
+    outline: 3px solid rgba(183, 119, 63, 0.34);
+    outline-offset: 2px;
+}
+
+.tab-panel[hidden] {
+    display: none;
+}
+
+.tab-panel--calendar {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "calendar";
+}
+
+.dashboard-grid.tab-panel--mission {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+        "hero"
+        "mission";
+}
+
+.dashboard-grid.tab-panel--calendar {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "calendar";
+}
+
+.tab-panel--review {
+    display: grid;
+    gap: 18px;
+    grid-template-columns: minmax(0, 1fr);
+}
+
 .panel {
     background: var(--card);
     border: 1px solid var(--border);
@@ -268,6 +338,173 @@ h2 {
 .card-copy {
     margin-top: 12px;
     color: var(--sub);
+}
+
+.review-card {
+    min-width: 0;
+}
+
+.review-card > .form-group {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    padding-inline: 12px;
+    box-sizing: border-box;
+}
+
+.review-date-input {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    min-height: 48px;
+    padding: 0 14px;
+    border: 1px solid rgba(145, 114, 88, 0.2);
+    box-sizing: border-box;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.92);
+    color: var(--text);
+    font: inherit;
+}
+
+.review-date-input:focus-visible {
+    outline: 3px solid rgba(183, 119, 63, 0.28);
+    outline-offset: 2px;
+}
+
+.history-checklist {
+    display: grid;
+    gap: 18px;
+    margin-top: 18px;
+}
+
+.history-check,
+.history-lesson-check {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 48px;
+    padding: 10px 14px;
+    border: 1px solid rgba(145, 114, 88, 0.15);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.58);
+    color: var(--text);
+    font-weight: 700;
+}
+
+.history-check input,
+.history-lesson-check input {
+    flex: 0 0 auto;
+    width: 20px;
+    height: 20px;
+    accent-color: var(--accent);
+}
+
+.history-lessons {
+    display: grid;
+    gap: 8px;
+    border: 0;
+}
+
+.history-lessons legend {
+    margin-bottom: 8px;
+    color: var(--text);
+    font-weight: 700;
+}
+
+.history-lesson-list {
+    display: grid;
+    gap: 8px;
+}
+
+.history-lesson-empty,
+.history-status,
+.history-empty {
+    color: var(--sub);
+    font-size: 0.9rem;
+}
+
+.history-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 10px;
+}
+
+.history-actions .primary-button {
+    margin-top: 18px;
+}
+
+.history-actions .secondary-button {
+    margin-top: 18px;
+}
+
+.history-status:not(:empty) {
+    margin-top: 8px;
+}
+
+.saved-history {
+    margin-top: 24px;
+}
+
+.saved-history h4 {
+    margin-bottom: 8px;
+    color: var(--text);
+}
+
+.mission-history-list {
+    display: grid;
+    gap: 8px;
+    list-style: none;
+}
+
+.mission-history-list li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+    border: 1px solid rgba(145, 114, 88, 0.14);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.6);
+}
+
+.history-record-select {
+    min-width: 0;
+    padding: 4px 0;
+    border: 0;
+    background: transparent;
+    color: var(--accent-strong);
+    font: inherit;
+    font-weight: 700;
+    text-align: left;
+    cursor: pointer;
+}
+
+.report-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 145px), 1fr));
+    gap: 12px;
+    margin-top: 18px;
+}
+
+.report-metric {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 104px;
+    padding: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.82);
+    border-radius: 18px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.78), rgba(246, 228, 208, 0.78));
+    color: var(--sub);
+    font-size: 0.9rem;
+    font-weight: 650;
+}
+
+.report-metric strong {
+    color: var(--accent-strong);
+    font-size: 1.8rem;
+    line-height: 1.1;
 }
 
 .dashboard-stack {
@@ -979,6 +1216,32 @@ h2 {
 }
 
 @media (max-width: 520px) {
+    .tab-navigation {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        width: 100%;
+        gap: 3px;
+        margin-bottom: 12px;
+        padding: 4px;
+    }
+
+    .tab-button {
+        min-width: 0;
+        padding: 6px 4px;
+        font-size: 0.68rem;
+        line-height: 1.15;
+        white-space: normal;
+    }
+
+    .history-actions {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0;
+    }
+
+    .history-actions .secondary-button {
+        margin-top: 10px;
+    }
+
     .special-schedule-dialog {
         padding: 18px;
         border-radius: 18px;
@@ -1044,12 +1307,24 @@ h2 {
         padding: 30px;
     }
 
+    .tab-panel--review {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        align-items: start;
+    }
+
     .dashboard-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
         grid-template-areas:
             "hero hero"
             "mission mission"
             "calendar calendar";
+    }
+
+    .dashboard-grid.tab-panel--mission {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-areas:
+            "hero hero"
+            "mission mission";
     }
 
     .dashboard-stack {

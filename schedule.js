@@ -238,13 +238,14 @@
             };
         }
 
-        function getScheduleForDate(date) {
+        function getScheduleForDate(date, { ignoreDefaultHolidayClosure = false } = {}) {
             if (!isValidDate(date)) {
                 return [];
             }
 
             const dateKey = toDateKey(date);
             const dateOverride = config.dateOverrides.find(item => item.date === dateKey);
+            const holidayPolicyOverride = config.holidayPolicyOverrides.find(item => item.date === dateKey);
             const temporaryClosures = config.temporaryClosures.filter(closure =>
                 dateKey >= closure.startDate && dateKey <= closure.endDate
             );
@@ -252,7 +253,8 @@
             const isClosedWeekday = config.closedWeekdays.includes(date.getDay());
             const isClosedDate = config.closureDates.includes(dateKey);
             const hasGymClosure = temporaryClosures.some(closure => closure.scope !== "lesson");
-            const isHolidayClosure = holiday?.policy === "closed";
+            const isHolidayClosure = holiday?.policy === "closed" &&
+                !(ignoreDefaultHolidayClosure && !holidayPolicyOverride);
             const isGymClosed = isClosedWeekday || isClosedDate || hasGymClosure || isHolidayClosure;
 
             if (isGymClosed && dateOverride?.reopenClosedDay !== true) {

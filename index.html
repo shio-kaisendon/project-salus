@@ -7,11 +7,17 @@
     <meta name="description" content="PROJECT SALUS mission control dashboard for wellness planning and calendar generation.">
     <meta name="theme-color" content="#F7EFE7">
     <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="style.css?v=20261109-date-field-inset">
+    <link rel="stylesheet" href="style.css?v=20261109-review-input-inset">
 </head>
 <body>
     <div class="app-shell">
-        <main class="dashboard-grid">
+        <nav class="tab-navigation" role="tablist" aria-label="Mission Control sections">
+            <button id="missionTabButton" class="tab-button" type="button" role="tab" aria-selected="true" aria-controls="missionTab" tabindex="0">HEADER + MISSION</button>
+            <button id="reviewTabButton" class="tab-button" type="button" role="tab" aria-selected="false" aria-controls="reviewTab" tabindex="-1">REVIEW</button>
+            <button id="calendarTabButton" class="tab-button" type="button" role="tab" aria-selected="false" aria-controls="calendarTab" tabindex="-1">CALENDAR GENERATOR</button>
+        </nav>
+        <main>
+        <section id="missionTab" class="tab-panel tab-panel--mission dashboard-grid" role="tabpanel" aria-labelledby="missionTabButton">
             <section class="hero panel" aria-labelledby="project-title">
                 <div class="hero-top">
                     <div class="mission-patch" aria-label="PROJECT SALUS mission patch">
@@ -86,7 +92,83 @@
                     </article>
                 </div>
             </section>
+        </section>
 
+        <section id="reviewTab" class="tab-panel tab-panel--review" role="tabpanel" aria-labelledby="reviewTabButton" hidden>
+            <section class="card panel review-card" aria-labelledby="mission-history-title">
+                <div class="card-heading">
+                    <div>
+                        <p class="eyebrow">Mission records</p>
+                        <h3 id="mission-history-title">MISSION HISTORY</h3>
+                    </div>
+                    <span class="card-badge">ATTENDANCE</span>
+                </div>
+                <div class="form-group">
+                    <label for="historyDate">Mission date</label>
+                    <input id="historyDate" class="review-date-input" type="date">
+                </div>
+                <p id="historyScheduleSummary" class="card-copy" aria-live="polite"></p>
+                <div class="history-checklist">
+                    <label class="history-check">
+                        <input id="gymVisitCheckbox" type="checkbox">
+                        <span>Gym Visit</span>
+                    </label>
+                    <fieldset class="history-lessons">
+                        <legend>Lesson Attendance</legend>
+                        <div id="historyLessonList" class="history-lesson-list"></div>
+                    </fieldset>
+                </div>
+                <div class="history-actions">
+                    <button id="saveHistoryButton" class="primary-button" type="button">Save attendance</button>
+                    <button id="deleteHistoryButton" class="secondary-button" type="button" hidden>Delete record</button>
+                </div>
+                <p id="historyStatus" class="history-status" role="status" aria-live="polite"></p>
+                <section class="saved-history" aria-labelledby="saved-history-title">
+                    <h4 id="saved-history-title">Saved mission history</h4>
+                    <ul id="missionHistoryList" class="mission-history-list" aria-live="polite"></ul>
+                    <p id="missionHistoryEmpty" class="history-empty">No mission history saved.</p>
+                </section>
+            </section>
+
+            <section class="card panel review-card" aria-labelledby="monthly-report-title">
+                <div class="card-heading">
+                    <div>
+                        <p class="eyebrow">Monthly review</p>
+                        <h3 id="monthly-report-title">MONTHLY MISSION REPORT</h3>
+                    </div>
+                    <span class="card-badge">REPORT</span>
+                </div>
+                <div class="form-group">
+                    <label for="reportMonth">Report month</label>
+                    <input id="reportMonth" class="review-date-input" type="month">
+                </div>
+                <p id="reportMonthLabel" class="card-copy"></p>
+                <div class="report-grid">
+                    <article class="report-metric">
+                        <span>Gym Visits</span>
+                        <strong id="reportGymVisits">0</strong>
+                    </article>
+                    <article class="report-metric">
+                        <span>Classes Attended</span>
+                        <strong id="reportClassesAttended">0</strong>
+                    </article>
+                    <article class="report-metric">
+                        <span>Attendance Rate</span>
+                        <strong id="reportAttendanceRate">0%</strong>
+                    </article>
+                    <article class="report-metric">
+                        <span>Planned Days</span>
+                        <strong id="reportPlannedDays">0</strong>
+                    </article>
+                    <article class="report-metric">
+                        <span>Missed Days</span>
+                        <strong id="reportMissedDays">0</strong>
+                    </article>
+                </div>
+            </section>
+        </section>
+
+        <section id="calendarTab" class="tab-panel tab-panel--calendar dashboard-grid" role="tabpanel" aria-labelledby="calendarTabButton" hidden>
             <section class="card primary-card panel" aria-labelledby="calendar-title">
                 <div class="card-heading">
                     <div>
@@ -129,6 +211,7 @@
                 </section>
                 <div id="result" class="result-card" role="status" aria-live="polite"></div>
             </section>
+        </section>
         </main>
     </div>
 
@@ -161,6 +244,6 @@
     </dialog>
 
     <script src="schedule.js"></script>
-    <script src="script.js?v=20261109-upcoming-gym-day"></script>
+    <script src="script.js?v=20261109-mission-history-report"></script>
 </body>
 </html>
