@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,149 +7,160 @@
     <meta name="description" content="PROJECT SALUS mission control dashboard for wellness planning and calendar generation.">
     <meta name="theme-color" content="#F7EFE7">
     <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=20261109-date-field-inset">
 </head>
 <body>
     <div class="app-shell">
-        <header class="hero panel">
-            <div class="hero-top">
-                <div class="mission-patch" aria-label="PROJECT SALUS mission patch">
-                    <img src="assets/images/PROJECT_SALUS_MissionPatch_v1.jpeg" alt="PROJECT SALUS mission patch" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                    <div class="patch-fallback" aria-hidden="true">✦</div>
-                </div>
-                <div class="hero-status">
-                    <span class="status-pill">
-                        <span class="status-dot"></span>
-                        Mission Status: Live
-                    </span>
-                    <div class="mission-meta" aria-label="Mission metadata">
-                        <span class="meta-item"><strong>Mission ID</strong> SALUS-01</span>
-                        <span class="meta-item"><strong>Mission Phase</strong> OPERATIONAL</span>
-                    </div>
-                    <p class="hero-kicker">個人の健康ミッションを支える司令室</p>
-                </div>
-            </div>
-
-            <div class="hero-main">
-                <div class="title-block">
-                    <p class="eyebrow">NASA-inspired operations</p>
-                    <h1>PROJECT SALUS</h1>
-                    <h2>MISSION CONTROL</h2>
-                </div>
-                <div class="clock-card" aria-live="polite">
-                    <span class="clock-label">現在時刻</span>
-                    <div id="liveClock" class="clock-time">--:--</div>
-                </div>
-            </div>
-
-            <div class="hud-row" aria-label="Mission control HUD">
-                <span class="hud-item">HEALTH</span>
-                <span class="hud-item">CALENDAR</span>
-                <span class="hud-item">WATCH</span>
-                <span class="hud-item">MISSION LOG</span>
-                <span class="hud-item">SYSTEM</span>
-            </div>
-
-            <p class="hero-copy">今日の健康ミッションを、静かに・正確に・着実に進めるためのミッションコントロールです。</p>
-        </header>
-
         <main class="dashboard-grid">
-            <section class="card panel mission-dashboard" aria-labelledby="mission-dashboard-title">
-                <div class="card-heading">
-                    <div>
-                        <p class="card-label">MISSION DASHBOARD</p>
-                        <h3 id="mission-dashboard-title">ミッション ダッシュボード</h3>
+            <section class="hero panel" aria-labelledby="project-title">
+                <div class="hero-top">
+                    <div class="mission-patch" aria-label="PROJECT SALUS mission patch">
+                        <img src="assets/images/PROJECT_SALUS_MissionPatch_v1.jpeg.PNG" alt="PROJECT SALUS mission patch" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <div class="patch-fallback" aria-hidden="true">✦</div>
                     </div>
-                    <span class="card-badge">TODAY</span>
+                    <div class="hero-status">
+                        <span class="status-pill">
+                            <span class="status-dot"></span>
+                            Mission Status: Live
+                        </span>
+                        <div class="mission-meta" aria-label="Mission metadata">
+                            <span class="meta-item"><strong>Mission ID</strong> SALUS-01</span>
+                            <span class="meta-item"><strong>Mission Phase</strong> OPERATIONAL</span>
+                        </div>
+                        <p class="hero-kicker">Your personal health mission control center</p>
+                    </div>
                 </div>
 
+                <div class="hero-main">
+                    <div class="title-block">
+                        <p class="eyebrow">NASA-inspired operations</p>
+                        <h1 id="project-title">PROJECT SALUS</h1>
+                        <h2>MISSION CONTROL</h2>
+                    </div>
+                </div>
+
+                <p class="hero-copy">A calm, precise command center to keep your daily health mission on track.</p>
+            </section>
+
+            <section class="card panel mission-section" aria-labelledby="mission-section-title">
+                <div class="card-heading">
+                    <h3 id="mission-section-title">MISSION</h3>
+                    <span class="card-badge">DAILY BRIEFING</span>
+                </div>
                 <div class="dashboard-stack">
+                    <article class="glass-card next-mission-card" aria-labelledby="next-mission-title">
+                        <div class="glass-card__header">
+                            <h4 id="next-mission-title">NEXT</h4>
+                        </div>
+                        <p class="mission-item-label next-mission-event">
+                            <span id="nextMissionEmoji" aria-hidden="true">🚗</span>
+                            <span id="nextMissionName">DEPARTURE</span>
+                        </p>
+                        <p id="nextMission" class="next-mission-time" aria-live="polite"></p>
+                    </article>
+
                     <article class="glass-card mission-list-card">
                         <div class="glass-card__header">
-                            <p class="glass-card__eyebrow">今日のミッション</p>
-                            <h4>今日の予定</h4>
+                            <h4>TODAY</h4>
                         </div>
-                        <ul class="mission-list">
-                            <li><span class="mission-item-marker"></span>ジムへ出発</li>
-                            <li><span class="mission-item-marker"></span>メガダンス</li>
-                            <li><span class="mission-item-marker"></span>ダークボックス</li>
+                        <ul id="todaySchedule" class="mission-list" aria-live="polite">
                         </ul>
                     </article>
 
-                    <article class="glass-card progress-card">
+                    <article class="glass-card next-gym-day-card">
                         <div class="glass-card__header">
-                            <p class="glass-card__eyebrow">進捗</p>
-                            <h4>ミッション進捗</h4>
+                            <h4>NEXT GYM DAY</h4>
                         </div>
-                        <div class="progress-block">
-                            <div class="progress-meta">
-                                <span class="progress-value">60%</span>
-                                <span class="progress-label">進行中</span>
-                            </div>
-                            <div class="progress-bar" role="progressbar" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100">
-                                <span class="progress-bar__fill"></span>
-                            </div>
-                        </div>
+                        <p id="nextGymDayDate" class="mission-item-label next-gym-day-date"></p>
+                        <ul id="nextGymDaySchedule" class="mission-list" aria-live="polite">
+                        </ul>
                     </article>
 
-                    <article class="glass-card next-mission-card">
+                    <article class="glass-card upcoming-gym-day-card" id="upcomingGymDayCard" hidden>
                         <div class="glass-card__header">
-                            <p class="glass-card__eyebrow">次のミッション</p>
-                            <h4>出発</h4>
+                            <h4>UPCOMING</h4>
                         </div>
-                        <p class="next-mission-time">11:15</p>
+                        <p id="upcomingGymDayDate" class="mission-item-label next-gym-day-date"></p>
+                        <ul id="upcomingGymDaySchedule" class="mission-list" aria-live="polite">
+                        </ul>
                     </article>
-
-                    <article class="glass-card status-card">
-                        <div class="glass-card__header">
-                            <p class="glass-card__eyebrow">ステータス</p>
-                            <h4>通信状態</h4>
-                        </div>
-                        <div class="status-list" aria-label="Mission status">
-                            <span class="status-chip online">ONLINE</span>
-                            <span class="status-chip synced">SYNCED</span>
-                            <span class="status-chip ready">READY</span>
-                        </div>
-                    </article>
-                </div>
-
-                <div class="quick-actions" role="group" aria-label="クイックアクション">
-                    <button type="button" class="quick-action">ダッシュボード</button>
-                    <button type="button" class="quick-action">カレンダー</button>
-                    <button type="button" class="quick-action">ミッションログ</button>
-                    <button type="button" class="quick-action">設定</button>
                 </div>
             </section>
 
             <section class="card primary-card panel" aria-labelledby="calendar-title">
                 <div class="card-heading">
                     <div>
-                        <p class="card-label">OPERATIONS</p>
-                        <h3 id="calendar-title">カレンダー生成</h3>
+                        <h3 id="calendar-title">CALENDAR GENERATOR</h3>
                     </div>
                     <span class="card-badge">LIVE</span>
                 </div>
 
                 <div class="form-group">
-                    <label for="startDate">開始日</label>
+                    <label for="startDate">Start date</label>
                     <input type="date" id="startDate">
                 </div>
                 <div class="form-group">
-                    <label for="endDate">終了日</label>
+                    <label for="endDate">End date</label>
                     <input type="date" id="endDate">
                 </div>
-                <div class="form-group checkbox">
-                    <input type="checkbox" id="specialWeek">
-                    <label for="specialWeek">スペシャルウィーク</label>
-                </div>
-
-                <p class="card-copy">ミッションのタイムライン用にカレンダーを生成します。</p>
-                <button id="calendarButton" class="primary-button">カレンダーを生成</button>
+                <button id="specialScheduleButton" class="secondary-button" type="button">SPECIAL SCHEDULE DAY</button>
+                <fieldset class="form-group calendar-types">
+                    <legend>Calendars to generate</legend>
+                    <div class="checkbox">
+                        <input type="checkbox" id="includeDeparture" value="departure" checked>
+                        <label for="includeDeparture">Departure</label>
+                    </div>
+                    <div class="checkbox">
+                        <input type="checkbox" id="includeLesson" value="lesson" checked>
+                        <label for="includeLesson">Lesson</label>
+                    </div>
+                    <div class="checkbox">
+                        <input type="checkbox" id="includeWalk" value="walk" checked>
+                        <label for="includeWalk">Walk</label>
+                    </div>
+                </fieldset>
+                <p class="card-copy">Generate calendars for your mission timeline.</p>
+                <button id="calendarButton" class="primary-button">Generate calendars</button>
+                <section class="saved-special-schedules" aria-labelledby="saved-special-schedules-title">
+                    <h4 id="saved-special-schedules-title">Saved special days</h4>
+                    <ul id="specialScheduleList" class="special-schedule-list" aria-live="polite"></ul>
+                    <p id="specialScheduleEmpty" class="special-schedule-empty">No special days saved.</p>
+                    <p id="specialScheduleStatus" class="special-schedule-status" role="status" aria-live="polite"></p>
+                </section>
                 <div id="result" class="result-card" role="status" aria-live="polite"></div>
             </section>
         </main>
     </div>
 
-    <script src="script.js"></script>
+    <dialog id="specialScheduleDialog" class="special-schedule-dialog" aria-labelledby="special-schedule-title">
+        <form id="specialScheduleForm">
+            <div class="special-schedule-dialog__header">
+                <div>
+                    <p class="eyebrow">Calendar override</p>
+                    <h3 id="special-schedule-title">SPECIAL SCHEDULE DAY</h3>
+                </div>
+                <button id="closeSpecialScheduleButton" class="icon-button" type="button" aria-label="Close">×</button>
+            </div>
+            <div class="special-schedule-date-grid">
+                <div class="form-group">
+                    <label for="specialStartDate">Start date</label>
+                    <input id="specialStartDate" name="startDate" type="date" required>
+                </div>
+                <div class="form-group">
+                    <label for="specialEndDate">End date</label>
+                    <input id="specialEndDate" name="endDate" type="date" required>
+                </div>
+            </div>
+            <div id="specialDateSchedules" class="special-date-schedules"></div>
+            <p id="specialScheduleMessage" class="special-schedule-message" role="status" aria-live="polite"></p>
+            <div class="special-schedule-actions">
+                <button id="cancelSpecialScheduleButton" class="secondary-button" type="button">Cancel</button>
+                <button class="primary-button" type="submit">Save special days</button>
+            </div>
+        </form>
+    </dialog>
+
+    <script src="schedule.js"></script>
+    <script src="script.js?v=20261109-upcoming-gym-day"></script>
 </body>
 </html>
