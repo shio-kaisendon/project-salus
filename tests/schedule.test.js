@@ -76,8 +76,25 @@ function makeElementMock(tagName) {
         attributes: {},
         dataset: {},
         listeners: {},
+        classList: {
+            values: new Set(),
+            toggle(name, force) {
+                if (force) {
+                    this.values.add(name);
+                } else {
+                    this.values.delete(name);
+                }
+                return this.values.has(name);
+            },
+            contains(name) {
+                return this.values.has(name);
+            }
+        },
         textContent: "",
         value: "",
+        contains(node) {
+            return node === this || this.children.includes(node);
+        },
         append(...children) {
             children.forEach(child => {
                 child.parentNode = this;
@@ -142,6 +159,7 @@ function createSpecialScheduleContext(storage, fixedNow = [2026, 10, 2, 10, 0]) 
         "upcomingGymDayCard", "upcomingGymDayDate", "upcomingGymDaySchedule",
         "nextMissionEmoji", "nextMissionName", "result", "startDate", "endDate",
         "missionTabButton", "reviewTabButton", "calendarTabButton",
+        "tabNavigation",
         "missionTab", "reviewTab", "calendarTab", "historyDate",
         "historyScheduleSummary", "historyLessonList",
         "todayAttendanceStatus",
@@ -175,6 +193,8 @@ function createSpecialScheduleContext(storage, fixedNow = [2026, 10, 2, 10, 0]) 
 
     const document = {
         getElementById: id => elements.get(id) || null,
+        querySelector: selector => selector === ".tab-navigation" ? elements.get("tabNavigation") : null,
+        activeElement: null,
         createElement: makeElementMock,
         createTextNode: textContent => ({ textContent })
     };
@@ -191,6 +211,14 @@ function createSpecialScheduleContext(storage, fixedNow = [2026, 10, 2, 10, 0]) 
             storage.set(key, value);
         }
     };
+    const windowObject = {
+        localStorage,
+        scrollY: 0,
+        listeners: {},
+        addEventListener(name, callback, options) {
+            this.listeners[name] = { callback, options };
+        }
+    };
     const context = vm.createContext({
         Blob,
         Date: FixedDate,
@@ -204,12 +232,12 @@ function createSpecialScheduleContext(storage, fixedNow = [2026, 10, 2, 10, 0]) 
         },
         document,
         setInterval() {},
-        window: { localStorage }
+        window: windowObject
     });
 
     vm.runInContext(readFileSync(path.join(__dirname, "../schedule.js"), "utf8"), context);
     vm.runInContext(readFileSync(path.join(__dirname, "../script.js"), "utf8"), context);
-    return { context, elements, blobs };
+    return { context, elements, blobs, window: windowObject };
 }
 
 test("keeps the weekly schedule and regular closures", () => {
@@ -952,7 +980,7 @@ test("mission activity map lays out month boundaries and navigates without chang
     assert.equal(html.includes("MONTHLY MISSION REPORT"), false);
 });
 
-test("tab navigation stays in document flow below the safe area with accessible tap targets", () => {
+test("tab navigation floats above the safe area with accessible tap targets", () => {
     const html = readFileSync(path.join(__dirname, "../index.html"), "utf8");
     const stylesheet = readFileSync(path.join(__dirname, "../style.css"), "utf8");
     const navigationStart = html.indexOf('<nav class="tab-navigation"');
@@ -961,10 +989,51 @@ test("tab navigation stays in document flow below the safe area with accessible 
     assert.ok(navigationStart < html.indexOf("<main>"));
     assert.match(html, /name="viewport" content="[^"]*viewport-fit=cover/);
     assert.match(stylesheet, /body\s*\{[^}]*padding:\s*max\(20px,\s*env\(safe-area-inset-top\)\)/s);
-    assert.match(stylesheet, /\.tab-button\s*\{[^}]*min-width:\s*44px;[^}]*min-height:\s*48px;/s);
+    assert.match(stylesheet, /\.tab-button\s*\{[^}]*min-width:\s*44px;[^}]*min-height:\s*60px;/s);
+    assert.match(stylesheet, /\.tab-navigation\s*\{[^}]*position:\s*fixed;[^}]*bottom:\s*calc\(env\(safe-area-inset-bottom\)\s*\+\s*12px\)/s);
+    assert.match(stylesheet, /body\s*\{[^}]*padding:[^;]*calc\(112px\s*\+\s*env\(safe-area-inset-bottom\)\)/s);
+    assert.match(html, /id="missionTabButton"[^>]*>[\s\S]*?<svg[^>]*aria-hidden="true"[\s\S]*?<span>MISSION<\/span>/);
+    assert.match(html, /id="reviewTabButton"[^>]*>[\s\S]*?<svg[^>]*aria-hidden="true"[\s\S]*?<span>REVIEW<\/span>/);
+    assert.match(html, /id="calendarTabButton"[^>]*>[\s\S]*?<svg[^>]*aria-hidden="true"[\s\S]*?<span>CALENDAR GENERATOR<\/span>/);
 
     const navigationRule = stylesheet.match(/\.tab-navigation\s*\{([^}]*)\}/)?.[1] || "";
-    assert.doesNotMatch(navigationRule, /position:\s*(?:fixed|sticky)/);
+    assert.match(navigationRule, /backdrop-filter:\s*blur\(24px\)/);
+    assert.match(stylesheet, /\.tab-navigation\s*\{[^}]*transition:\s*transform var\(--transition\), opacity var\(--transition\), visibility/s);
+    assert.match(stylesheet, /\.tab-navigation--hidden\s*\{[^}]*transform:\s*translate\(-50%,\s*calc\(100%\s*\+\s*24px\)\)/s);
+});
+
+test("tab navigation follows scroll direction with a threshold and retains its state when scrolling stops", () => {
+    const { elements, window } = createSpecialScheduleContext(new Map());
+    const navigation = elements.get("tabNavigation");
+    const scroll = window.listeners.scroll;
+
+    assert.ok(scroll);
+    assert.equal(scroll.options.passive, true);
+    assert.equal(navigation.classList.contains("tab-navigation--hidden"), false);
+
+    const scrollTo = position => {
+        window.scrollY = position;
+        scroll.callback();
+    };
+
+    scrollTo(7);
+    assert.equal(navigation.classList.contains("tab-navigation--hidden"), false);
+    scrollTo(13);
+    assert.equal(navigation.classList.contains("tab-navigation--hidden"), true);
+    assert.equal(navigation.inert, true);
+
+    scrollTo(500);
+    scrollTo(500);
+    assert.equal(navigation.classList.contains("tab-navigation--hidden"), true);
+
+    scrollTo(494);
+    assert.equal(navigation.classList.contains("tab-navigation--hidden"), true);
+    scrollTo(480);
+    assert.equal(navigation.classList.contains("tab-navigation--hidden"), false);
+    assert.equal(navigation.inert, false);
+
+    scrollTo(0);
+    assert.equal(navigation.classList.contains("tab-navigation--hidden"), false);
 });
 
 test("mission activity map uses the current schedule instead of saved planned-day snapshots", () => {
@@ -1307,8 +1376,8 @@ test("Dashboard and category-specific ICS downloads use the same schedule", asyn
     const html = readFileSync(path.join(__dirname, "../index.html"), "utf8");
     assert.match(html, /<article class="glass-card upcoming-gym-day-card" id="upcomingGymDayCard" hidden>/);
     assert.match(html, /<h4>UPCOMING<\/h4>/);
-    assert.match(html, /<link rel="stylesheet" href="style\.css\?v=20261109-lesson-attendance">/);
-    assert.match(html, /<script src="script\.js\?v=20261109-lesson-attendance"><\/script>/);
+    assert.match(html, /<link rel="stylesheet" href="style\.css\?v=20261117-floating-tabs">/);
+    assert.match(html, /<script src="script\.js\?v=20261117-floating-tabs-scroll"><\/script>/);
     assert.match(stylesheet, /\.review-card > \.form-group\s*\{[^}]*width:\s*100%;[^}]*min-width:\s*0;[^}]*max-width:\s*100%;[^}]*padding-inline:\s*12px;[^}]*box-sizing:\s*border-box;/s);
     assert.match(stylesheet, /\.review-date-input\s*\{[^}]*width:\s*100%;[^}]*min-width:\s*0;[^}]*max-width:\s*100%;[^}]*box-sizing:\s*border-box;/s);
     assert.match(stylesheet, /\.next-mission-card\s*\{[^}]*justify-content:\s*flex-start;[^}]*align-items:\s*stretch;/s);

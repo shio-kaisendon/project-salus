@@ -1368,6 +1368,56 @@ function initializeTabNavigation() {
         return;
     }
 
+    const navigation = document.querySelector(".tab-navigation");
+    if (navigation) {
+        const scrollThreshold = 12;
+        let lastScrollPosition = Math.max(0, window.scrollY || window.pageYOffset || 0);
+        let accumulatedScroll = 0;
+        let lastDirection = 0;
+        let shouldHideNavigation = false;
+
+        function setNavigationHidden(hidden) {
+            shouldHideNavigation = hidden;
+            if (hidden && navigation.contains(document.activeElement)) {
+                return;
+            }
+            navigation.classList.toggle("tab-navigation--hidden", hidden);
+            navigation.inert = hidden;
+        }
+
+        navigation.addEventListener("focusout", event => {
+            if (shouldHideNavigation && !navigation.contains(event.relatedTarget)) {
+                navigation.classList.toggle("tab-navigation--hidden", true);
+                navigation.inert = true;
+            }
+        });
+
+        window.addEventListener("scroll", () => {
+            const scrollPosition = Math.max(0, window.scrollY || window.pageYOffset || 0);
+            const delta = scrollPosition - lastScrollPosition;
+            lastScrollPosition = scrollPosition;
+
+            if (scrollPosition === 0) {
+                accumulatedScroll = 0;
+                lastDirection = 0;
+                setNavigationHidden(false);
+                return;
+            }
+            if (delta === 0) {
+                return;
+            }
+
+            const direction = Math.sign(delta);
+            accumulatedScroll = direction === lastDirection ? accumulatedScroll + delta : delta;
+            lastDirection = direction;
+            if (accumulatedScroll >= scrollThreshold) {
+                setNavigationHidden(true);
+            } else if (accumulatedScroll <= -scrollThreshold) {
+                setNavigationHidden(false);
+            }
+        }, { passive: true });
+    }
+
     function activateTab(tab, moveFocus = false) {
         tabs.forEach(candidate => {
             const selected = candidate === tab;

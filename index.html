@@ -10,14 +10,23 @@
     <link rel="apple-touch-icon" sizes="180x180" href="./assets/images/PROJECT_SALUS_MissionPatch_180.png">
     <meta name="apple-mobile-web-app-title" content="PROJECT SALUS Mission Control">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <link rel="stylesheet" href="style.css?v=20261109-lesson-attendance">
+    <link rel="stylesheet" href="style.css?v=20261117-floating-tabs">
 </head>
 <body>
     <div class="app-shell">
         <nav class="tab-navigation" role="tablist" aria-label="Mission Control sections">
-            <button id="missionTabButton" class="tab-button" type="button" role="tab" aria-selected="true" aria-controls="missionTab" tabindex="0">HEADER + MISSION</button>
-            <button id="reviewTabButton" class="tab-button" type="button" role="tab" aria-selected="false" aria-controls="reviewTab" tabindex="-1">REVIEW</button>
-            <button id="calendarTabButton" class="tab-button" type="button" role="tab" aria-selected="false" aria-controls="calendarTab" tabindex="-1">CALENDAR GENERATOR</button>
+            <button id="missionTabButton" class="tab-button" type="button" role="tab" aria-selected="true" aria-controls="missionTab" tabindex="0">
+                <svg class="tab-button__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="5"></circle><circle cx="12" cy="12" r="1"></circle></svg>
+                <span>MISSION</span>
+            </button>
+            <button id="reviewTabButton" class="tab-button" type="button" role="tab" aria-selected="false" aria-controls="reviewTab" tabindex="-1">
+                <svg class="tab-button__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3v3m8-3v3M4.5 9h15M6 5h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z"></path><path d="m9 15 2 2 4-4"></path></svg>
+                <span>REVIEW</span>
+            </button>
+            <button id="calendarTabButton" class="tab-button" type="button" role="tab" aria-selected="false" aria-controls="calendarTab" tabindex="-1">
+                <svg class="tab-button__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3v3m8-3v3M4.5 9h15M6 5h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z"></path><path d="M8 13h2m4 0h2M8 17h2m4 0h2"></path></svg>
+                <span>CALENDAR GENERATOR</span>
+            </button>
         </nav>
         <main>
         <section id="missionTab" class="tab-panel tab-panel--mission dashboard-grid" role="tabpanel" aria-labelledby="missionTabButton">
@@ -244,6 +253,6 @@
     </dialog>
 
     <script src="schedule.js"></script>
-    <script src="script.js?v=20261109-lesson-attendance"></script>
+    <script src="script.js?v=20261117-floating-tabs-scroll"></script>
 </body>
 </html>

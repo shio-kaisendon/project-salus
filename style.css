@@ -23,7 +23,7 @@
 
 body {
     min-height: 100vh;
-    padding: max(20px, env(safe-area-inset-top)) 20px 20px;
+    padding: max(20px, env(safe-area-inset-top)) 20px calc(112px + env(safe-area-inset-bottom));
     background:
         radial-gradient(circle at top left, rgba(255, 255, 255, 0.8), transparent 28%),
         linear-gradient(135deg, var(--bg) 0%, var(--bg-deep) 100%);
@@ -41,41 +41,66 @@ body {
 }
 
 .tab-navigation {
-    display: flex;
-    gap: 6px;
-    width: fit-content;
-    max-width: 100%;
-    margin: 0 auto 18px;
+    position: fixed;
+    z-index: 20;
+    left: 50%;
+    bottom: calc(env(safe-area-inset-bottom) + 12px);
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 4px;
+    width: min(480px, calc(100vw - 32px));
+    max-width: calc(100vw - 32px);
     padding: 5px;
+    transform: translateX(-50%);
+    transition: transform var(--transition), opacity var(--transition), visibility 0s linear;
     border: 1px solid rgba(255, 255, 255, 0.78);
     border-radius: 999px;
-    background: rgba(255, 250, 243, 0.64);
-    box-shadow: 0 8px 22px rgba(73, 44, 24, 0.08);
-    backdrop-filter: blur(18px) saturate(140%);
-    -webkit-backdrop-filter: blur(18px) saturate(140%);
+    background: rgba(255, 250, 243, 0.76);
+    box-shadow: 0 10px 28px rgba(73, 44, 24, 0.18);
+    backdrop-filter: blur(24px) saturate(160%);
+    -webkit-backdrop-filter: blur(24px) saturate(160%);
+}
+
+.tab-navigation--hidden {
+    transform: translate(-50%, calc(100% + 24px));
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: transform var(--transition), opacity var(--transition), visibility 0s linear var(--transition);
 }
 
 .tab-button {
-    min-height: 44px;
     min-width: 44px;
-    min-height: 48px;
-    padding: 0 18px;
+    min-height: 60px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 6px 8px;
     border: 0;
     border-radius: 999px;
     background: transparent;
     color: var(--sub);
     font: inherit;
-    font-size: 0.82rem;
+    font-size: 0.68rem;
     font-weight: 750;
-    white-space: nowrap;
+    line-height: 1.1;
+    text-align: center;
     cursor: pointer;
     transition: background var(--transition), color var(--transition), box-shadow var(--transition);
 }
 
+.tab-button__icon {
+    width: 20px;
+    height: 20px;
+    flex: 0 0 auto;
+}
+
 .tab-button[aria-selected="true"] {
-    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
-    color: white;
-    box-shadow: 0 6px 14px rgba(143, 85, 40, 0.22);
+    background: rgba(230, 201, 160, 0.62);
+    color: var(--accent-strong);
+    box-shadow: inset 0 0 0 1px rgba(143, 85, 40, 0.08);
 }
 
 .tab-button:focus-visible,
@@ -1446,20 +1471,16 @@ h2 {
 
 @media (max-width: 520px) {
     .tab-navigation {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        width: 100%;
-        gap: 3px;
-        margin-bottom: 12px;
+        width: calc(100vw - 28px);
+        max-width: calc(100vw - 28px);
+        gap: 2px;
         padding: 4px;
     }
 
     .tab-button {
         min-width: 0;
-        padding: 6px 4px;
-        font-size: 0.68rem;
-        line-height: 1.15;
-        white-space: normal;
+        padding: 6px 3px;
+        font-size: clamp(0.55rem, 2.8vw, 0.68rem);
     }
 
     .history-actions {
@@ -1567,7 +1588,7 @@ h2 {
 
 @media (min-width: 700px) {
     body {
-        padding: max(30px, env(safe-area-inset-top)) 30px 30px;
+        padding: max(30px, env(safe-area-inset-top)) 30px calc(112px + env(safe-area-inset-bottom));
     }
 
     .tab-panel--review {
@@ -1631,7 +1652,7 @@ h2 {
 
 @media (max-width: 699px) {
     body {
-        padding: max(20px, env(safe-area-inset-top)) 14px 12px;
+        padding: max(20px, env(safe-area-inset-top)) 14px calc(112px + env(safe-area-inset-bottom));
     }
 
     .app-shell {
