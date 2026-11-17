@@ -1,0 +1,24 @@
+{
+  "id": "./",
+  "name": "PROJECT SALUS Mission Control",
+  "short_name": "PROJECT SALUS Mission Control",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F7EFE7",
+  "theme_color": "#F7EFE7",
+  "icons": [
+    {
+      "src": "./assets/images/PROJECT_SALUS_MissionPatch_192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./assets/images/PROJECT_SALUS_MissionPatch_512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
