@@ -48,41 +48,81 @@ function isValidTime(value) {
 function loadSpecialSchedules() {
     try {
         const storedValue = window.localStorage.getItem(SPECIAL_SCHEDULE_STORAGE_KEY);
-        const parsed = storedValue ? JSON.parse(storedValue) : {};
-        if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-            return {};
+        if (storedValue === null) {
+            return { schedules: {}, status: "empty", error: "" };
         }
 
-        return Object.fromEntries(Object.entries(parsed).flatMap(([date, schedule]) => {
-            if (!parseLocalDate(date) || !schedule || typeof schedule !== "object") {
+        const parsed = JSON.parse(storedValue);
+        if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+            return {
+                schedules: {},
+                status: "error",
+                error: "Saved special schedules could not be read. Editing is disabled to protect existing data."
+            };
+        }
+
+        let hasInvalidSchedule = false;
+        const schedules = Object.fromEntries(Object.entries(parsed).flatMap(([date, schedule]) => {
+            if (!parseLocalDate(date) || !schedule || typeof schedule !== "object" ||
+                Array.isArray(schedule)) {
+                hasInvalidSchedule = true;
                 return [];
             }
 
+            const departureField = schedule.departure;
             const departureTime = schedule.departure?.time ?? schedule.departureTime;
+            if ((departureField !== undefined && departureField !== null &&
+                (!departureField || typeof departureField !== "object" ||
+                    Array.isArray(departureField) || !isValidTime(departureField.time))) ||
+                (departureTime !== undefined && departureTime !== null && !isValidTime(departureTime))) {
+                hasInvalidSchedule = true;
+                return [];
+            }
+            if (schedule.lessons !== undefined && !Array.isArray(schedule.lessons)) {
+                hasInvalidSchedule = true;
+                return [];
+            }
             const departure = isValidTime(departureTime)
                 ? { time: departureTime }
                 : null;
-            const lessons = Array.isArray(schedule.lessons)
-                ? schedule.lessons.filter(lesson =>
-                    lesson &&
-                    typeof lesson.name === "string" &&
-                    lesson.name.trim() &&
-                    isValidTime(lesson.start) &&
-                    isValidTime(lesson.end) &&
-                    lesson.start < lesson.end &&
-                    (lesson.emoji === undefined || typeof lesson.emoji === "string")
-                ).map(lesson => ({
-                    name: lesson.name.trim(),
-                    start: lesson.start,
-                    end: lesson.end,
-                    emoji: lesson.emoji || ""
-                }))
-                : [];
+            const sourceLessons = schedule.lessons || [];
+            const validLessons = sourceLessons.every(lesson =>
+                lesson &&
+                typeof lesson.name === "string" &&
+                lesson.name.trim() &&
+                isValidTime(lesson.start) &&
+                isValidTime(lesson.end) &&
+                lesson.start < lesson.end &&
+                (lesson.emoji === undefined || typeof lesson.emoji === "string")
+            );
+            if (!validLessons) {
+                hasInvalidSchedule = true;
+                return [];
+            }
+            const lessons = sourceLessons.map(lesson => ({
+                name: lesson.name.trim(),
+                start: lesson.start,
+                end: lesson.end,
+                emoji: lesson.emoji || ""
+            }));
 
             return [[date, { date, departure, lessons }]];
         }));
+        if (hasInvalidSchedule) {
+            return {
+                schedules: {},
+                status: "error",
+                error: "Some saved special schedules are invalid. Editing is disabled to protect existing data."
+            };
+        }
+
+        return { schedules, status: "loaded", error: "" };
     } catch {
-        return {};
+        return {
+            schedules: {},
+            status: "error",
+            error: "Saved special schedules could not be read. Editing is disabled to protect existing data."
+        };
     }
 }
 
@@ -459,7 +499,9 @@ function updateDashboard(now) {
 const button = document.getElementById("calendarButton");
 const createScheduleEngine = window.SALUS_SCHEDULE.createScheduleEngine;
 const defaultDateOverrides = window.SALUS_SCHEDULE.defaultDateOverrides;
-let specialSchedules = loadSpecialSchedules();
+const loadedSpecialSchedules = loadSpecialSchedules();
+let specialSchedules = loadedSpecialSchedules.schedules;
+let specialSchedulesLoadState = loadedSpecialSchedules.status;
 
 function applySpecialSchedules() {
     const dateOverridesByDate = new Map(defaultDateOverrides.map(override => [
@@ -500,8 +542,12 @@ function cloneSpecialSchedule(date, schedule = {}) {
 }
 
 function persistSpecialSchedules(schedules) {
+    if (specialSchedulesLoadState === "error") {
+        return false;
+    }
     try {
         window.localStorage.setItem(SPECIAL_SCHEDULE_STORAGE_KEY, JSON.stringify(schedules));
+        specialSchedulesLoadState = "loaded";
         return true;
     } catch {
         return false;
@@ -687,6 +733,14 @@ function initializeSpecialScheduleManagement() {
         return;
     }
 
+    if (specialSchedulesLoadState === "error") {
+        openButton.disabled = true;
+        const status = document.getElementById("specialScheduleStatus");
+        if (status) {
+            status.textContent = loadedSpecialSchedules.error;
+        }
+    }
+
     const startDateInput = document.getElementById("specialStartDate");
     const endDateInput = document.getElementById("specialEndDate");
     const status = document.getElementById("specialScheduleStatus");
@@ -746,6 +800,9 @@ function initializeSpecialScheduleManagement() {
     }
 
     openButton.addEventListener("click", () => {
+        if (specialSchedulesLoadState === "error") {
+            return;
+        }
         form.reset();
         dateSchedules.replaceChildren();
         draftSchedules = Object.fromEntries(Object.entries(specialSchedules).map(([date, schedule]) => [
@@ -765,6 +822,10 @@ function initializeSpecialScheduleManagement() {
 
     form.addEventListener("submit", event => {
         event.preventDefault();
+        if (specialSchedulesLoadState === "error") {
+            message.textContent = loadedSpecialSchedules.error;
+            return;
+        }
         syncVisibleSchedules();
         const { dates, error } = getSelectedDateKeys();
         if (error || dates.length === 0) {
@@ -844,15 +905,19 @@ function isValidMissionHistoryRecord(date, record) {
 function loadMissionHistory() {
     try {
         const storedValue = window.localStorage.getItem(MISSION_HISTORY_STORAGE_KEY);
-        if (!storedValue) {
-            return { records: {}, error: "" };
+        if (storedValue === null) {
+            return { records: {}, status: "empty", error: "" };
         }
 
         const parsed = JSON.parse(storedValue);
         if (!parsed || parsed.version !== MISSION_HISTORY_VERSION ||
             !parsed.records || typeof parsed.records !== "object" ||
             Array.isArray(parsed.records)) {
-            return { records: {}, error: "Saved mission history could not be read." };
+            return {
+                records: {},
+                status: "error",
+                error: "Saved mission history could not be read. Editing is disabled to protect existing data."
+            };
         }
 
         let hasInvalidRecord = false;
@@ -883,16 +948,24 @@ function loadMissionHistory() {
                 updatedAt: record.updatedAt
             };
         });
-        return {
-            records,
-            error: hasInvalidRecord ? "Some invalid mission history entries were skipped." : ""
-        };
+        return hasInvalidRecord
+            ? {
+                records: {},
+                status: "error",
+                error: "Some saved mission history entries are invalid. Editing is disabled to protect existing data."
+            }
+            : { records, status: "loaded", error: "" };
     } catch {
-        return { records: {}, error: "Saved mission history could not be read." };
+        return {
+            records: {},
+            status: "error",
+            error: "Saved mission history could not be read. Editing is disabled to protect existing data."
+        };
     }
 }
 
 let missionHistory = {};
+let missionHistoryLoadState = "unloaded";
 
 function getAttendedLessonCount(record) {
     const attendedLessons = (record?.lessons || []).filter(lesson => lesson.attended);
@@ -914,11 +987,15 @@ function isLessonAttended(record, event) {
 }
 
 function persistMissionHistory(records) {
+    if (missionHistoryLoadState === "error" || missionHistoryLoadState === "unloaded") {
+        return false;
+    }
     try {
         window.localStorage.setItem(MISSION_HISTORY_STORAGE_KEY, JSON.stringify({
             version: MISSION_HISTORY_VERSION,
             records
         }));
+        missionHistoryLoadState = "loaded";
         return true;
     } catch {
         return false;
@@ -1252,6 +1329,124 @@ function renderMissionHistoryList() {
     });
 }
 
+function summarizeBackupValue(rawValue, collectionProperty) {
+    if (rawValue === null) {
+        return { status: "missing", count: 0, dateRange: null };
+    }
+    try {
+        const parsed = JSON.parse(rawValue);
+        const collection = collectionProperty ? parsed?.[collectionProperty] : parsed;
+        if (!collection || typeof collection !== "object" || Array.isArray(collection)) {
+            return { status: "unreadable", count: null, dateRange: null };
+        }
+        const dates = Object.keys(collection).filter(date => parseLocalDate(date)).sort();
+        return {
+            status: "available",
+            count: Object.keys(collection).length,
+            dateRange: dates.length ? [dates[0], dates.at(-1)] : null
+        };
+    } catch {
+        return { status: "unreadable", count: null, dateRange: null };
+    }
+}
+
+function getBackupSnapshot() {
+    const specialSchedules = window.localStorage.getItem(SPECIAL_SCHEDULE_STORAGE_KEY);
+    const missionHistory = window.localStorage.getItem(MISSION_HISTORY_STORAGE_KEY);
+    return {
+        rawValues: {
+            [SPECIAL_SCHEDULE_STORAGE_KEY]: specialSchedules,
+            [MISSION_HISTORY_STORAGE_KEY]: missionHistory
+        },
+        summaries: {
+            specialSchedules: summarizeBackupValue(specialSchedules, null),
+            missionHistory: summarizeBackupValue(missionHistory, "records")
+        }
+    };
+}
+
+function formatBackupDatasetSummary(label, summary, loadState) {
+    if (loadState === "error" || summary.status === "unreadable") {
+        return `${label}: unreadable; raw value will be included unchanged`;
+    }
+    if (summary.status === "missing") {
+        return `${label}: no saved data`;
+    }
+    const dateRange = summary.dateRange
+        ? `${summary.dateRange[0]} to ${summary.dateRange[1]}`
+        : "no valid dates";
+    return `${label}: ${summary.count} entries · ${dateRange}`;
+}
+
+function renderBackupSummary(snapshot) {
+    const summary = document.getElementById("dataBackupSummary");
+    if (!summary) {
+        return;
+    }
+    summary.textContent = [
+        formatBackupDatasetSummary("Mission History", snapshot.summaries.missionHistory, missionHistoryLoadState),
+        formatBackupDatasetSummary("Special Schedule", snapshot.summaries.specialSchedules, specialSchedulesLoadState)
+    ].join(" · ");
+}
+
+function initializeDataBackup() {
+    const backupButton = document.getElementById("downloadDataBackupButton");
+    const summaryElement = document.getElementById("dataBackupSummary");
+    const status = document.getElementById("dataBackupStatus");
+    const downloadLink = document.getElementById("dataBackupLink");
+    if (!backupButton || !summaryElement || !status || !downloadLink) {
+        return;
+    }
+
+    try {
+        renderBackupSummary(getBackupSnapshot());
+    } catch {
+        summaryElement.textContent = "Could not inspect current saved data.";
+    }
+
+    let downloadUrl = null;
+    backupButton.addEventListener("click", () => {
+        let snapshot;
+        try {
+            snapshot = getBackupSnapshot();
+        } catch {
+            status.textContent = "Could not read saved data for backup. No data was changed.";
+            return;
+        }
+
+        const backup = {
+            format: "project-salus-local-storage-backup",
+            createdAt: new Date().toISOString(),
+            storage: {
+                [SPECIAL_SCHEDULE_STORAGE_KEY]: {
+                    loadStatus: specialSchedulesLoadState,
+                    rawLocalStorageValue: snapshot.rawValues[SPECIAL_SCHEDULE_STORAGE_KEY]
+                },
+                [MISSION_HISTORY_STORAGE_KEY]: {
+                    loadStatus: missionHistoryLoadState,
+                    rawLocalStorageValue: snapshot.rawValues[MISSION_HISTORY_STORAGE_KEY]
+                }
+            },
+            summary: snapshot.summaries
+        };
+        if (downloadUrl) {
+            URL.revokeObjectURL(downloadUrl);
+        }
+        downloadUrl = URL.createObjectURL(new Blob(
+            [JSON.stringify(backup, null, 2)],
+            { type: "application/json;charset=utf-8" }
+        ));
+        const link = document.createElement("a");
+        link.className = "calendar-download";
+        link.href = downloadUrl;
+        link.download = `project-salus-backup-${dateToKey(new Date())}.json`;
+        link.textContent = "Download JSON backup";
+        downloadLink.replaceChildren(link);
+        renderBackupSummary(snapshot);
+        status.textContent = "Backup prepared. Tap the download link to save the JSON file.";
+    });
+}
+
 function initializeMissionHistory() {
     const elements = getHistoryElements();
     if (!elements.dateInput || !elements.scheduleSummary ||
@@ -1262,12 +1457,21 @@ function initializeMissionHistory() {
 
     const loaded = loadMissionHistory();
     missionHistory = loaded.records;
+    missionHistoryLoadState = loaded.status;
     elements.dateInput.value = dateToKey(new Date());
+    elements.saveButton.disabled = loaded.status === "error";
+    elements.deleteButton.disabled = loaded.status === "error";
     elements.dateInput.addEventListener("change", () => {
-        elements.status.textContent = "";
+        if (missionHistoryLoadState !== "error") {
+            elements.status.textContent = "";
+        }
         renderMissionHistoryDate();
     });
     elements.saveButton.addEventListener("click", () => {
+        if (missionHistoryLoadState === "error") {
+            elements.status.textContent = loaded.error;
+            return;
+        }
         const dateKey = elements.dateInput.value;
         const date = parseLocalDate(dateKey);
         if (!date) {
@@ -1291,6 +1495,10 @@ function initializeMissionHistory() {
         elements.status.textContent = "Mission history saved.";
     });
     elements.deleteButton.addEventListener("click", () => {
+        if (missionHistoryLoadState === "error") {
+            elements.status.textContent = loaded.error;
+            return;
+        }
         const dateKey = elements.dateInput.value;
         if (!missionHistory[dateKey]) {
             return;
@@ -1467,6 +1675,7 @@ initializeTabNavigation();
 initializeMissionHistory();
 initializeMissionActivityMap();
 initializeSpecialScheduleManagement();
+initializeDataBackup();
 updateMissionDisplay();
 setInterval(updateMissionDisplay, 1000);
 

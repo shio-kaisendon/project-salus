@@ -165,6 +165,7 @@ function createSpecialScheduleContext(storage, fixedNow = [2026, 10, 2, 10, 0]) 
         "todayAttendanceStatus",
         "saveHistoryButton", "deleteHistoryButton", "historyStatus",
         "missionHistoryList", "missionHistoryEmpty",
+        "downloadDataBackupButton", "dataBackupSummary", "dataBackupLink", "dataBackupStatus",
         "missionActivityMapCard", "activityMapPreviousMonth", "activityMapNextMonth",
         "activityMapMonth", "activityMonthlyClassesAttended", "activityCalendarGrid", "activitySelectedDateTitle",
         "activitySelectedDetails", "activityEditHistoryButton", "missionHistoryCard",
@@ -1341,15 +1342,119 @@ test("mission activity map shows today's unrecorded message and does not save on
 });
 
 test("invalid saved history reports a read error without removing stored data", () => {
-    const storage = new Map([[
-        "project-salus-mission-history",
-        JSON.stringify({ version: 99, records: { "invalid": {} } })
-    ]    ]);
+    const originalValue = JSON.stringify({ version: 99, records: { invalid: {} } });
+    const storage = new Map([["project-salus-mission-history", originalValue]]);
     const { context, elements } = createSpecialScheduleContext(storage);
     assert.match(elements.get("historyStatus").textContent, /could not be read/i);
-    assert.equal(storage.get("project-salus-mission-history"),
-        JSON.stringify({ version: 99, records: { invalid: {} } }));
+    assert.equal(elements.get("saveHistoryButton").disabled, true);
+    assert.equal(elements.get("deleteHistoryButton").disabled, true);
+    elements.get("saveHistoryButton").emit("click");
+    elements.get("deleteHistoryButton").emit("click");
+    assert.equal(storage.get("project-salus-mission-history"), originalValue);
     assert.equal(vm.runInContext("typeof renderMonthlyMissionReport", context), "undefined");
+});
+
+test("read failures disable saves for both datasets", () => {
+    let writes = 0;
+    const storage = {
+        get() {
+            throw new Error("storage read failed");
+        },
+        set() {
+            writes += 1;
+        }
+    };
+    const { elements } = createSpecialScheduleContext(storage);
+    assert.match(elements.get("historyStatus").textContent, /disabled to protect/i);
+    assert.match(elements.get("specialScheduleStatus").textContent, /disabled to protect/i);
+    assert.equal(elements.get("saveHistoryButton").disabled, true);
+    assert.equal(elements.get("specialScheduleButton").disabled, true);
+
+    elements.get("saveHistoryButton").emit("click");
+    elements.get("specialScheduleButton").emit("click");
+    elements.get("specialScheduleForm").emit("submit", { preventDefault() {} });
+    assert.equal(writes, 0);
+});
+
+test("malformed saved JSON is not replaced with empty data", () => {
+    const originalHistory = "{bad mission history";
+    const originalSchedules = "{bad special schedules";
+    const storage = new Map([
+        ["project-salus-mission-history", originalHistory],
+        ["project-salus-special-schedules", originalSchedules]
+    ]);
+    const { elements } = createSpecialScheduleContext(storage);
+
+    elements.get("saveHistoryButton").emit("click");
+    elements.get("specialScheduleForm").emit("submit", { preventDefault() {} });
+    assert.equal(storage.get("project-salus-mission-history"), originalHistory);
+    assert.equal(storage.get("project-salus-special-schedules"), originalSchedules);
+    assert.match(elements.get("historyStatus").textContent, /disabled to protect/i);
+    assert.match(elements.get("specialScheduleStatus").textContent, /disabled to protect/i);
+});
+
+test("invalid saved records are not replaced with empty datasets", () => {
+    const originalHistory = JSON.stringify({
+        version: 1,
+        records: {
+            "2026-11-10": {
+                date: "2026-11-10",
+                plannedGym: true,
+                lessons: [{ id: 1, name: "Invalid lesson", attended: true }],
+                updatedAt: "2026-11-10T12:00:00.000Z"
+            }
+        }
+    });
+    const originalSchedules = JSON.stringify({
+        "2026-11-10": {
+            lessons: [{ name: "Invalid lesson", start: "not-a-time", end: "12:00" }]
+        }
+    });
+    const storage = new Map([
+        ["project-salus-mission-history", originalHistory],
+        ["project-salus-special-schedules", originalSchedules]
+    ]);
+    const { elements } = createSpecialScheduleContext(storage);
+
+    assert.match(elements.get("historyStatus").textContent, /invalid.*disabled to protect/i);
+    assert.match(elements.get("specialScheduleStatus").textContent, /invalid.*disabled to protect/i);
+    elements.get("saveHistoryButton").emit("click");
+    elements.get("specialScheduleForm").emit("submit", { preventDefault() {} });
+    assert.equal(storage.get("project-salus-mission-history"), originalHistory);
+    assert.equal(storage.get("project-salus-special-schedules"), originalSchedules);
+});
+
+test("data backup includes both raw values without changing saved data", async () => {
+    const originalSchedules = JSON.stringify({
+        "2026-11-10": { departureTime: "10:30", lessons: [] }
+    });
+    const originalHistory = JSON.stringify({
+        version: 1,
+        records: {
+            "2026-11-11": {
+                date: "2026-11-11",
+                plannedGym: true,
+                lessons: [{ id: "lesson", name: "Lesson", attended: true }],
+                updatedAt: "2026-11-11T12:00:00.000Z"
+            }
+        }
+    });
+    const storage = new Map([
+        ["project-salus-special-schedules", originalSchedules],
+        ["project-salus-mission-history", originalHistory]
+    ]);
+    const originalEntries = JSON.stringify([...storage.entries()]);
+    const { elements, blobs } = createSpecialScheduleContext(storage);
+
+    assert.match(elements.get("dataBackupSummary").textContent, /Mission History: 1 entries · 2026-11-11 to 2026-11-11/);
+    assert.match(elements.get("dataBackupSummary").textContent, /Special Schedule: 1 entries · 2026-11-10 to 2026-11-10/);
+    elements.get("downloadDataBackupButton").emit("click");
+
+    const backup = JSON.parse(await blobs[0].text());
+    assert.equal(backup.storage["project-salus-special-schedules"].rawLocalStorageValue, originalSchedules);
+    assert.equal(backup.storage["project-salus-mission-history"].rawLocalStorageValue, originalHistory);
+    assert.deepEqual([...storage.entries()], JSON.parse(originalEntries));
+    assert.equal(elements.get("dataBackupLink").children[0].download, "project-salus-backup-2026-11-02.json");
 });
 
 test("loads existing special schedules from the previous localStorage format", () => {
@@ -1536,7 +1641,7 @@ test("Dashboard and category-specific ICS downloads use the same schedule", asyn
     assert.match(html, /<article class="glass-card upcoming-gym-day-card" id="upcomingGymDayCard" hidden>/);
     assert.match(html, /<h4>UPCOMING<\/h4>/);
     assert.match(html, /<link rel="stylesheet" href="style\.css\?v=20261117-floating-tabs">/);
-    assert.match(html, /<script src="script\.js\?v=20261117-floating-tabs-scroll"><\/script>/);
+    assert.match(html, /<script src="script\.js\?v=20261118-data-preservation"><\/script>/);
     assert.match(stylesheet, /\.review-card > \.form-group\s*\{[^}]*width:\s*100%;[^}]*min-width:\s*0;[^}]*max-width:\s*100%;[^}]*padding-inline:\s*12px;[^}]*box-sizing:\s*border-box;/s);
     assert.match(stylesheet, /\.review-date-input\s*\{[^}]*width:\s*100%;[^}]*min-width:\s*0;[^}]*max-width:\s*100%;[^}]*box-sizing:\s*border-box;/s);
     assert.match(stylesheet, /\.next-mission-card\s*\{[^}]*justify-content:\s*flex-start;[^}]*align-items:\s*stretch;/s);
