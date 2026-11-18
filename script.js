@@ -458,11 +458,19 @@ function updateDashboard(now) {
 
 const button = document.getElementById("calendarButton");
 const createScheduleEngine = window.SALUS_SCHEDULE.createScheduleEngine;
+const defaultDateOverrides = window.SALUS_SCHEDULE.defaultDateOverrides;
 let specialSchedules = loadSpecialSchedules();
 
 function applySpecialSchedules() {
+    const dateOverridesByDate = new Map(defaultDateOverrides.map(override => [
+        override.date,
+        override
+    ]));
+    getSpecialScheduleDateOverrides(specialSchedules).forEach(override => {
+        dateOverridesByDate.set(override.date, override);
+    });
     window.SALUS_SCHEDULE = createScheduleEngine({
-        dateOverrides: getSpecialScheduleDateOverrides(specialSchedules)
+        dateOverrides: [...dateOverridesByDate.values()]
     });
 }
 

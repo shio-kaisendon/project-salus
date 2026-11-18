@@ -27,17 +27,96 @@
         ]
     };
 
+    const DECEMBER_2026_SCHEDULE = {
+        1: [
+            { id: "lesson-megadanz", type: "lesson", label: "MEGADANZ", start: "14:15", end: "15:00" }
+        ],
+        2: [
+            { id: "lesson-zumba", type: "lesson", label: "ZUMBA", start: "13:00", end: "13:45" },
+            { id: "lesson-dark-box", type: "lesson", label: "DARK BOX", start: "14:15", end: "14:45" }
+        ],
+        3: [
+            { id: "lesson-ubound", type: "lesson", label: "UBOUND", start: "12:50", end: "13:20" },
+            { id: "lesson-fun-fun-aerobics", type: "lesson", label: "Fun! Fun! Aerobics", start: "13:45", end: "14:30" }
+        ],
+        5: [
+            { id: "lesson-fun-fun-aerobics", type: "lesson", label: "Fun! Fun! Aerobics", start: "11:45", end: "12:30" },
+            { id: "lesson-fight-do", type: "lesson", label: "FIGHT DO", start: "13:00", end: "13:30" },
+            { id: "lesson-group-centergy", type: "lesson", label: "GROUP CENTERGY", start: "14:00", end: "14:45" }
+        ]
+    };
+
+    const DECEMBER_2026_DATE_OVERRIDES = [
+        {
+            date: "2026-12-25",
+            reopenClosedDay: true,
+            events: [
+                { id: "special-20261225-group-centergy", type: "lesson", label: "GROUP CENTERGY", start: "11:45", end: "12:30", specialSchedule: true },
+                { id: "special-20261225-theme-park-dance", type: "lesson", label: "Theme Park Dance (Beginner)", start: "14:00", end: "14:45", specialSchedule: true }
+            ]
+        },
+        {
+            date: "2026-12-28",
+            reopenClosedDay: true,
+            events: [
+                { id: "special-20261228-megadanz", type: "lesson", label: "MEGADANZ", start: "14:15", end: "15:00", specialSchedule: true },
+                { id: "special-20261228-megadanz-paid", type: "lesson", label: "MEGADANZ (Special / Paid / Booking Pending)", start: "15:30", end: "16:30", specialSchedule: true }
+            ]
+        },
+        {
+            date: "2026-12-29",
+            reopenClosedDay: true,
+            events: [
+                { id: "special-20261229-zumba", type: "lesson", label: "ZUMBA", start: "13:00", end: "13:45", specialSchedule: true },
+                { id: "special-20261229-fight-do-paid", type: "lesson", label: "FIGHT DO (Special / Paid / Booking Pending)", start: "14:30", end: "15:45", specialSchedule: true }
+            ]
+        },
+        { date: "2026-12-30", events: [] },
+        { date: "2026-12-31", events: [] },
+        { date: "2027-01-01", events: [] },
+        { date: "2027-01-02", events: [] },
+        { date: "2027-01-03", events: [] },
+        {
+            date: "2027-01-04",
+            reopenClosedDay: true,
+            events: [
+                { id: "special-20270104-dance-aerobics", type: "lesson", label: "Dance Aerobics", start: "13:00", end: "13:45", specialSchedule: true },
+                { id: "special-20270104-megadanz", type: "lesson", label: "MEGADANZ", start: "14:15", end: "15:00", specialSchedule: true }
+            ]
+        },
+        {
+            date: "2027-01-05",
+            reopenClosedDay: true,
+            events: [
+                { id: "special-20270105-zumba", type: "lesson", label: "ZUMBA", start: "13:00", end: "13:45", specialSchedule: true },
+                { id: "special-20270105-dark-box", type: "lesson", label: "DARK BOX", start: "14:15", end: "14:45", specialSchedule: true }
+            ]
+        },
+        {
+            date: "2027-01-06",
+            reopenClosedDay: true,
+            events: [
+                { id: "special-20270106-ubound", type: "lesson", label: "UBOUND", start: "12:50", end: "13:20", specialSchedule: true },
+                { id: "special-20270106-fun-fun-aerobics", type: "lesson", label: "Fun! Fun! Aerobics", start: "13:45", end: "14:30", specialSchedule: true }
+            ]
+        }
+    ];
+
     // Date keys use local YYYY-MM-DD. Closed days require an explicit date override to reopen.
     // temporaryClosures use { startDate, endDate, scope: "gym" | "lesson", eventIds? }.
     // date overrides use { date, events, reopenClosedDay? }; holiday policies are "open" or "closed".
     const SCHEDULE_CONFIG = {
         weeklySchedule: WEEKLY_SCHEDULE,
+        weeklyScheduleChanges: [{
+            effectiveDate: "2026-12-01",
+            schedule: DECEMBER_2026_SCHEDULE
+        }],
         closedWeekdays: [0, 4, 6],
         closureDates: [],
         defaultHolidayPolicy: "closed",
         holidayPolicyOverrides: [],
         temporaryClosures: [],
-        dateOverrides: [],
+        dateOverrides: DECEMBER_2026_DATE_OVERRIDES,
         eventCancellations: []
     };
     const WEEKDAY_NAMES = ["日曜日", "月曜日", "火曜日", "水曜日", "木曜日", "金曜日", "土曜日"];
@@ -267,7 +346,12 @@
             } else if (isClosedWeekday || isClosedDate || hasGymClosure) {
                 return [];
             } else {
-                events = config.weeklySchedule[date.getDay()] || [];
+                const scheduleChange = config.weeklyScheduleChanges
+                    .filter(change => change.effectiveDate <= dateKey)
+                    .sort((first, second) => first.effectiveDate.localeCompare(second.effectiveDate))
+                    .at(-1);
+                const weeklySchedule = scheduleChange?.schedule || config.weeklySchedule;
+                events = weeklySchedule[date.getDay()] || [];
             }
 
             return events
@@ -370,6 +454,7 @@
     window.SALUS_SCHEDULE = Object.freeze({
         ...createScheduleEngine(),
         createScheduleEngine,
+        defaultDateOverrides: DECEMBER_2026_DATE_OVERRIDES,
         weekdayNames: WEEKDAY_NAMES
     });
 })();

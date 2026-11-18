@@ -254,6 +254,68 @@ test("keeps the weekly schedule and regular closures", () => {
     );
 });
 
+test("applies the December 2026 weekly lessons without changing the schedule before December 1", () => {
+    assert.deepEqual(
+        schedule.getScheduleForDate(localDate("2026-11-30")).map(event => event.id),
+        ["departure", "preparation", "walk-1", "lesson-megadanz", "walk-2"]
+    );
+
+    const expected = {
+        "2026-12-07": [["MEGADANZ", "14:15", "15:00"]],
+        "2026-12-01": [["ZUMBA", "13:00", "13:45"], ["DARK BOX", "14:15", "14:45"]],
+        "2026-12-02": [["UBOUND", "12:50", "13:20"], ["Fun! Fun! Aerobics", "13:45", "14:30"]],
+        "2026-12-04": [
+            ["Fun! Fun! Aerobics", "11:45", "12:30"],
+            ["FIGHT DO", "13:00", "13:30"],
+            ["GROUP CENTERGY", "14:00", "14:45"]
+        ]
+    };
+    for (const [date, lessons] of Object.entries(expected)) {
+        assert.deepEqual(
+            schedule.getScheduleForDate(localDate(date))
+                .map(event => [event.label, event.start, event.end]),
+            lessons
+        );
+    }
+
+    assert.equal(
+        schedule.getScheduleForDate(localDate("2026-12-01"))
+            .every(event => event.type === "lesson"),
+        true
+    );
+});
+
+test("special dates replace weekly lessons and the year-end gap has no schedule", () => {
+    const expected = {
+        "2026-12-25": [
+            ["GROUP CENTERGY", "11:45", "12:30"],
+            ["Theme Park Dance (Beginner)", "14:00", "14:45"]
+        ],
+        "2026-12-28": [
+            ["MEGADANZ", "14:15", "15:00"],
+            ["MEGADANZ (Special / Paid / Booking Pending)", "15:30", "16:30"]
+        ],
+        "2026-12-29": [
+            ["ZUMBA", "13:00", "13:45"],
+            ["FIGHT DO (Special / Paid / Booking Pending)", "14:30", "15:45"]
+        ],
+        "2027-01-04": [["Dance Aerobics", "13:00", "13:45"], ["MEGADANZ", "14:15", "15:00"]],
+        "2027-01-05": [["ZUMBA", "13:00", "13:45"], ["DARK BOX", "14:15", "14:45"]],
+        "2027-01-06": [["UBOUND", "12:50", "13:20"], ["Fun! Fun! Aerobics", "13:45", "14:30"]]
+    };
+    for (const [date, lessons] of Object.entries(expected)) {
+        const events = schedule.getScheduleForDate(localDate(date));
+        assert.deepEqual(events.map(event => [event.label, event.start, event.end]), lessons);
+        assert.ok(events.every(event => event.type === "lesson" && event.specialSchedule));
+    }
+
+    for (const date of [
+        "2026-12-30", "2026-12-31", "2027-01-01", "2027-01-02", "2027-01-03"
+    ]) {
+        assert.deepEqual(schedule.getScheduleForDate(localDate(date)), []);
+    }
+});
+
 test("applies Japanese public holidays and substitute holidays", () => {
     const emperorBirthday = localDate("2026-02-23");
     const substituteHoliday = localDate("2026-05-06");
@@ -886,6 +948,103 @@ test("mission history looks up November 3 and regular Tuesdays by local weekday"
         ))),
         [["ZUMBA", "13:00", "13:45"], ["Dark Box", "14:15", "14:45"]]
     );
+});
+
+test("December attendance updates mission history and the activity map, including zero attendance", () => {
+    const storage = new Map();
+    const { context, elements } = createSpecialScheduleContext(storage, [2026, 11, 10, 10, 0]);
+    const historyDate = elements.get("historyDate");
+    const lessonList = elements.get("historyLessonList");
+    const saveButton = elements.get("saveHistoryButton");
+    const todayRows = date => {
+        const [year, month, day] = date.split("-").map(Number);
+        vm.runInContext(
+            `updateDashboard(new Date(${year}, ${month - 1}, ${day}, 10, 0))`,
+            context
+        );
+        return elements.get("todaySchedule").children;
+    };
+    const dayState = date => elements.get("activityCalendarGrid").children
+        .find(day => day.dataset.date === date).className;
+
+    assert.deepEqual(
+        todayRows("2026-12-02").map(row => row.children[0].children[2].textContent),
+        ["UBOUND", "Fun! Fun! Aerobics"]
+    );
+    assert.deepEqual(
+        todayRows("2026-12-04").map(row => row.children[0].children[2].textContent),
+        ["Fun! Fun! Aerobics", "FIGHT DO", "GROUP CENTERGY"]
+    );
+
+    historyDate.value = "2026-12-02";
+    historyDate.emit("change");
+    assert.deepEqual(lessonList.children.map(row => row.lessonName), [
+        "UBOUND", "Fun! Fun! Aerobics"
+    ]);
+    lessonList.children[0].attendanceCheckbox.checked = true;
+    saveButton.emit("click");
+
+    let stored = JSON.parse(storage.get("project-salus-mission-history"));
+    assert.equal(stored.records["2026-12-02"].plannedGym, true);
+    assert.deepEqual(stored.records["2026-12-02"].lessons.map(lesson => lesson.attended), [true, false]);
+    assert.equal(elements.get("activityMonthlyClassesAttended").textContent, "1");
+    assert.match(dayState("2026-12-02"), /--completed$/);
+
+    historyDate.value = "2026-12-04";
+    historyDate.emit("change");
+    assert.deepEqual(lessonList.children.map(row => row.lessonName), [
+        "Fun! Fun! Aerobics", "FIGHT DO", "GROUP CENTERGY"
+    ]);
+    saveButton.emit("click");
+    stored = JSON.parse(storage.get("project-salus-mission-history"));
+    assert.equal(stored.records["2026-12-04"].plannedGym, true);
+    assert.deepEqual(stored.records["2026-12-04"].lessons.map(lesson => lesson.attended), [
+        false, false, false
+    ]);
+    assert.equal(elements.get("activityMonthlyClassesAttended").textContent, "1");
+    assert.match(dayState("2026-12-04"), /--missed$/);
+
+    historyDate.value = "2026-12-28";
+    historyDate.emit("change");
+    assert.deepEqual(lessonList.children.map(row => row.lessonName), [
+        "MEGADANZ", "MEGADANZ (Special / Paid / Booking Pending)"
+    ]);
+    assert.equal(lessonList.children[1].attendanceCheckbox.checked, false);
+});
+
+test("ICS export includes December and special lessons without weekly duplicates", async () => {
+    const { elements, blobs } = createSpecialScheduleContext(new Map());
+    elements.get("startDate").value = "2026-12-01";
+    elements.get("endDate").value = "2027-01-06";
+    elements.get("calendarButton").emit("click");
+
+    const calendars = await Promise.all(blobs.map(blob => blob.text()));
+    assert.equal(calendars.length, 3);
+    const [departureCalendar, lessonCalendar, walkCalendar] = calendars.map(parseICS);
+    assert.equal(departureCalendar.events.length, 0);
+    assert.equal(walkCalendar.events.length, 0);
+    assert.equal(lessonCalendar.events.length, 40);
+    assert.deepEqual(
+        lessonCalendar.events.map(event => getICSProperty(event, "UID")),
+        schedule.getEventsByType(localDate("2026-12-01"), localDate("2027-01-06"), "lesson")
+            .map(({ dateKey, event }) => `${dateKey}-${event.id}@project-salus`)
+    );
+    for (const date of [
+        "2026-12-25", "2026-12-28", "2026-12-29",
+        "2027-01-04", "2027-01-05", "2027-01-06"
+    ]) {
+        const dateEvents = lessonCalendar.events.filter(event =>
+            getICSProperty(event, "UID").startsWith(`${date}-`)
+        );
+        assert.equal(dateEvents.length, 2, `${date} should export only its two special lessons`);
+    }
+    assert.equal(
+        lessonCalendar.events.some(event =>
+            getICSProperty(event, "UID").startsWith("2026-12-30-")
+        ),
+        false
+    );
+    assert.ok(lessonCalendar.lines.includes("TZID:Asia/Tokyo"));
 });
 
 test("a Special Schedule Day replaces the regular schedule on November 3", () => {
